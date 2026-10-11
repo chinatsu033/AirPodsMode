@@ -14,6 +14,29 @@
     <string name="mode_anc_desc">隔绝外界噪音</string>
     <string name="mode_transparency_desc">听清周围声音</string>
     <string name="mode_adaptive_desc">自动在降噪与通透之间调节</string>
+    <string name="mode_adaptive_level_hint">Adaptive · 强度 %1$d — 再点一次展开档位</string>
+    <string name="action_expand_adaptive">展开 Adaptive 档位</string>
+
+    <string name="adaptive_more_transparency">更通透</string>
+    <string name="adaptive_more_transparency_desc">多放进环境声（强度 0）</string>
+    <string name="adaptive_default">Adaptive</string>
+    <string name="adaptive_default_desc">默认平衡（强度 50）</string>
+    <string name="adaptive_more_anc">更降噪</string>
+    <string name="adaptive_more_anc_desc">多隔绝噪音（强度 100）</string>
+    <string name="adaptive_pro3_note">说明：AirPods Pro 3 可能接受 Adaptive 强度包，但听感变化不明显（社区反馈）。</string>
+
+    <string name="ca_title">对话感知</string>
+    <string name="ca_desc">你开口说话时自动降低媒体音量</string>
+
+    <string name="spatial_title">空间音频</string>
+    <string name="spatial_apple_note">苹果空间音频（含头部跟踪）依赖 Apple 的 HRTF，安卓上不 Root 一般用不了。这里绝不会假装已经打开成功。</string>
+    <string name="spatial_system_available">这台手机提供了安卓 Spatializer。可以尝试切换，或打开系统声音设置（三星 360 音频是另一套）。</string>
+    <string name="spatial_open_settings_hint">可打开系统声音设置，查看三星 360 音频 / 空间音效选项。</string>
+    <string name="spatial_unavailable">这台设备无法为 AirPods 提供空间音频。</string>
+    <string name="spatial_try_toggle">尝试系统 Spatializer</string>
+    <string name="spatial_open_settings">声音设置</string>
+    <string name="spatial_try_ok">系统接受了 Spatializer 调用（不是苹果空间音频）。</string>
+    <string name="spatial_try_failed">无法更改 Spatializer（很多机型需要更高权限）。请改用声音设置。</string>
 
     <string name="section_modes">聆听模式</string>
     <string name="action_connect">连接</string>
@@ -40,5 +63,5 @@
     <string name="tile_active">使用中</string>
     <string name="tile_tap_to_set">点按切换</string>
 
-    <string name="hint_qs_tiles">提示：下拉控制中心，点编辑，添加「AirPods 模式」（在降噪 → 通透 → Adaptive 之间循环）或三个单独的快捷开关。三星手机需要 One UI 9 / Android 17，并且不用 Root。请先在系统蓝牙里配对 AirPods。</string>
+    <string name="hint_qs_tiles">提示：下拉控制中心 → 编辑 → 添加「AirPods 模式」（降噪 → 通透 → Adaptive 循环）或三个单独快捷开关。三星需要 One UI 9 / Android 17，不用 Root。请先在系统蓝牙里配对 AirPods。</string>
 </resources>

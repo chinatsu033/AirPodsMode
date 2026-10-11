@@ -12,6 +12,7 @@ import androidx.core.app.ServiceCompat
 import io.github.chinatsu033.airpodsmode.AirPodsModeApp
 import io.github.chinatsu033.airpodsmode.MainActivity
 import io.github.chinatsu033.airpodsmode.R
+import io.github.chinatsu033.airpodsmode.aacp.AdaptiveNoisePreset
 import io.github.chinatsu033.airpodsmode.aacp.NoiseMode
 import io.github.chinatsu033.airpodsmode.bt.BondedAirPodsFinder
 import io.github.chinatsu033.airpodsmode.tile.ModeCycleTileService
@@ -40,16 +41,41 @@ class AirPodsForegroundService : Service() {
             ACTION_SET_MODE -> {
                 val wire = intent.getByteExtra(EXTRA_MODE, NoiseMode.ADAPTIVE.wireValue)
                 val mode = NoiseMode.fromWire(wire) ?: NoiseMode.ADAPTIVE
+                val level = if (intent.hasExtra(EXTRA_ADAPTIVE_LEVEL)) {
+                    intent.getIntExtra(EXTRA_ADAPTIVE_LEVEL, AdaptiveNoisePreset.DEFAULT.level)
+                } else null
                 scope.launch {
                     ensureConnected()
-                    app().connection.setMode(mode)
+                    app().connection.setMode(mode, adaptiveLevel = level)
+                }
+            }
+            ACTION_SET_ADAPTIVE_LEVEL -> {
+                val level = intent.getIntExtra(
+                    EXTRA_ADAPTIVE_LEVEL,
+                    AdaptiveNoisePreset.DEFAULT.level,
+                )
+                scope.launch {
+                    ensureConnected()
+                    app().connection.setAdaptiveLevel(level)
+                }
+            }
+            ACTION_SET_CA -> {
+                val enabled = intent.getBooleanExtra(EXTRA_CA_ENABLED, false)
+                scope.launch {
+                    ensureConnected()
+                    app().connection.setConversationalAwareness(enabled)
                 }
             }
             ACTION_CYCLE -> {
                 scope.launch {
                     ensureConnected()
                     val next = NoiseMode.cycleNext(app().connection.state.value.mode)
-                    app().connection.setMode(next)
+                    app().connection.setMode(
+                        next,
+                        adaptiveLevel = if (next == NoiseMode.ADAPTIVE) {
+                            AdaptiveNoisePreset.DEFAULT.level
+                        } else null,
+                    )
                 }
             }
             else -> scope.launch { connect() }
@@ -62,9 +88,7 @@ class AirPodsForegroundService : Service() {
 
     private suspend fun ensureConnected() {
         val st = app().connection.state.value
-        if (!st.connected && !st.connecting) {
-            connect()
-        }
+        if (!st.connected && !st.connecting) connect()
     }
 
     private suspend fun connect() {
@@ -129,8 +153,7 @@ class AirPodsForegroundService : Service() {
             .setOnlyAlertOnce(true)
             .setContentIntent(
                 PendingIntent.getActivity(
-                    this,
-                    0,
+                    this, 0,
                     Intent(this, MainActivity::class.java),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
@@ -146,13 +169,25 @@ class AirPodsForegroundService : Service() {
         const val ACTION_CONNECT = "io.github.chinatsu033.airpodsmode.CONNECT"
         const val ACTION_DISCONNECT = "io.github.chinatsu033.airpodsmode.DISCONNECT"
         const val ACTION_SET_MODE = "io.github.chinatsu033.airpodsmode.SET_MODE"
+        const val ACTION_SET_ADAPTIVE_LEVEL = "io.github.chinatsu033.airpodsmode.SET_ADAPTIVE_LEVEL"
+        const val ACTION_SET_CA = "io.github.chinatsu033.airpodsmode.SET_CA"
         const val ACTION_CYCLE = "io.github.chinatsu033.airpodsmode.CYCLE"
         const val EXTRA_MODE = "mode"
+        const val EXTRA_ADAPTIVE_LEVEL = "adaptive_level"
+        const val EXTRA_CA_ENABLED = "ca_enabled"
         private const val NOTIFICATION_ID = 42
 
-        fun start(context: Context, action: String = ACTION_CONNECT, mode: NoiseMode? = null) {
+        fun start(
+            context: Context,
+            action: String = ACTION_CONNECT,
+            mode: NoiseMode? = null,
+            adaptiveLevel: Int? = null,
+            caEnabled: Boolean? = null,
+        ) {
             val i = Intent(context, AirPodsForegroundService::class.java).setAction(action)
             if (mode != null) i.putExtra(EXTRA_MODE, mode.wireValue)
+            if (adaptiveLevel != null) i.putExtra(EXTRA_ADAPTIVE_LEVEL, adaptiveLevel)
+            if (caEnabled != null) i.putExtra(EXTRA_CA_ENABLED, caEnabled)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(i)
             } else {

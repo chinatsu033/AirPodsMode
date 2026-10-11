@@ -1,42 +1,45 @@
 # AirPods Mode
 
-精简的安卓 App：在三星等安卓机上切换 AirPods Pro 的 **降噪 / 通透 / Adaptive**，并提供控制中心（任务栏）快捷开关。
+精简的安卓 App：在三星等安卓机上切换 AirPods Pro 的 **降噪 / 通透 / Adaptive**，并提供控制中心快捷开关。
 
 个人学习项目，不盈利。AirPods 与相关协议归 Apple。本应用不播放音频，不接入苹果官方 SDK。
 
-## 功能
+## 功能（v0.2）
 
-- 三种聆听模式：Noise Cancellation、Transparency、**Adaptive**（必做）
-- 控制中心 Tile：
-  - **AirPods Mode**：一键循环 降噪 → 通透 → Adaptive
-  - 三个单独 Tile：降噪 / 通透 / Adaptive
-- App 内三个大圆角按钮 + 连接状态 + 电量（能读到时）
+- 三种聆听模式：Noise Cancellation、Transparency、**Adaptive**
+- **Adaptive 三档面板**（类似 iOS）：首次点 Adaptive 进入默认强度 50；再点 / 长按 / 点箭头展开毛玻璃卡片栈  
+  - 上：更通透（强度 0）  
+  - 中：默认 Adaptive（50）  
+  - 下：更降噪（100）  
+  - 发包：`04 00 04 00 09 00 2E [level] 00 00 00`  
+  - **说明：AirPods Pro 3 可能接受该包但听感变化不明显（社区反馈）。**
+- **对话感知**开关（AACP `0x28`）
+- **空间音频**：诚实处理——可尝试系统 Spatializer / 打开声音设置；**不会假装苹果空间音频已开启**（安卓无 Apple HRTF，通常需 Root）
+- 毛玻璃 UI + 桌面壁纸背景（无权限时用渐变兜底）
+- 控制中心 Tile：循环切换 + 三个单独开关
 - 简体中文 / English，跟随系统深浅色
 - **不需要 Root**，不依赖 Xposed
 
 ## 系统要求
 
-- **三星 One UI 9 / Android 17**（S26 Ultra 等）。更早的 One UI 在不 Root 时往往连不上 AACP 的 L2CAP 通道。
-- 先在系统蓝牙里配对 AirPods（支持 AirPods Pro 1/2/3、AirPods 4 ANC 等）。
-- 授予「附近的设备 / 蓝牙」和通知权限。
+- **三星 One UI 9 / Android 17**（如 S26 Ultra）。更早 One UI 在不 Root 时往往连不上 L2CAP。
+- 先在系统蓝牙里配对 AirPods（Pro 1/2/3、AirPods 4 ANC 等）。
+- 授予蓝牙与通知权限；壁纸权限可选。
 
 ## 安装
 
-从 [Releases](https://github.com/chinatsu033/AirPodsMode/releases) 下载 `AirPodsMode-*.apk` 安装。
+从 [Releases](https://github.com/chinatsu033/AirPodsMode/releases) 下载 `AirPodsMode-*.apk`。
 
-添加快捷开关：下拉控制中心 → 编辑 → 添加「AirPods Mode」或三个单独开关。
+## Adaptive 连接发包顺序
 
-## Adaptive 怎么切
+1. Handshake  
+2. Feature enable `04 00 04 00 4D 00 FF …`（解锁 Adaptive / 对话感知）  
+3. 订阅通知  
+4. ListeningModeConfigs `0x1A / 0x0F`  
+5. 设模式 Adaptive `0x0D / 0x04`  
+6. （可选）Adaptive 强度 `0x2E / level`
 
-连接后会按顺序发送：
-
-1. Handshake `00 00 04 00 01 00 02 00 …`
-2. Feature enable `04 00 04 00 4D 00 FF 00 …`（解锁 Adaptive）
-3. 订阅通知 `04 00 04 00 0F 00 FF FF FE FF`
-4. ListeningModeConfigs `0x1A / 0x0F`（开启全部模式含 Adaptive）
-5. 设置模式 `04 00 04 00 09 00 0D 04 00 00 00`（Adaptive = `0x04`）
-
-协议字节来自公开的 AACP 文档（LibrePods 的 AAP Definitions / control_commands），**未复制 LibrePods 源码**（该项目为 GPL-3.0）。本仓库为 MIT。依赖 HiddenApiBypass（Apache-2.0）以打开经典 BR/EDR L2CAP `PSM 0x1001`。
+协议字节来自公开 AACP 文档（LibrePods AAP Definitions），**未复制 LibrePods 源码**（GPL-3.0）。本仓库 MIT。依赖 HiddenApiBypass（Apache-2.0）。
 
 ## 构建
 
@@ -44,9 +47,7 @@
 ./gradlew assembleRelease
 ```
 
-签名密钥不要提交。本地可在 `local.properties` 指向 signing.properties。
-
 ## 说明
 
-- 没有真机 S26 Ultra / AirPods Pro 3 时无法完整验证 L2CAP 与 Adaptive。
-- 若连接失败，确认系统为 One UI 9，AirPods 已配对且在附近，并重启蓝牙后再试。
+- 没有真机 S26 Ultra / AirPods Pro 3 时无法完整验证 L2CAP、Adaptive 三档与对话感知。
+- 图标为原创剪影，不是苹果商标素材。

@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import io.github.chinatsu033.airpodsmode.aacp.AacpPackets
+import io.github.chinatsu033.airpodsmode.aacp.AdaptiveNoisePreset
 import io.github.chinatsu033.airpodsmode.aacp.NoiseMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,9 +21,6 @@ import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 
-/**
- * Holds one AACP L2CAP session to a bonded AirPods device.
- */
 class AirPodsConnection(
     private val scope: CoroutineScope,
 ) {
@@ -31,6 +29,8 @@ class AirPodsConnection(
         val deviceName: String? = null,
         val deviceAddress: String? = null,
         val mode: NoiseMode? = null,
+        val adaptiveLevel: Int = AdaptiveNoisePreset.DEFAULT.level,
+        val conversationalAwareness: Boolean? = null,
         val battery: AacpPackets.BatteryStatus? = null,
         val lastError: String? = null,
         val connecting: Boolean = false,
@@ -61,7 +61,6 @@ class AirPodsConnection(
             input = sock.inputStream
             output = sock.outputStream
 
-            // Handshake → feature unlock (Adaptive) → notifications → enable all listening modes.
             writeRaw(AacpPackets.HANDSHAKE)
             writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
             writeRaw(AacpPackets.REQUEST_NOTIFICATIONS)
@@ -82,23 +81,76 @@ class AirPodsConnection(
         }
     }
 
-    suspend fun setMode(mode: NoiseMode): Boolean = withContext(Dispatchers.IO) {
+    suspend fun setMode(mode: NoiseMode, adaptiveLevel: Int? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!_state.value.connected) {
+                _state.value = _state.value.copy(lastError = "Not connected")
+                return@withContext false
+            }
+            try {
+                if (mode == NoiseMode.ADAPTIVE) {
+                    writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
+                    writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
+                }
+                writeRaw(AacpPackets.setListeningMode(mode))
+                val level = adaptiveLevel ?: _state.value.adaptiveLevel
+                if (mode == NoiseMode.ADAPTIVE) {
+                    val clamped = level.coerceIn(0, 100)
+                    writeRaw(AacpPackets.setAdaptiveNoiseLevel(clamped))
+                    _state.value = _state.value.copy(
+                        mode = mode,
+                        adaptiveLevel = clamped,
+                        lastError = null,
+                    )
+                } else {
+                    _state.value = _state.value.copy(mode = mode, lastError = null)
+                }
+                true
+            } catch (t: Throwable) {
+                Log.w(TAG, "setMode failed", t)
+                _state.value = _state.value.copy(lastError = t.message ?: t.javaClass.simpleName)
+                false
+            }
+        }
+
+    suspend fun setAdaptiveLevel(level: Int): Boolean = withContext(Dispatchers.IO) {
         if (!_state.value.connected) {
             _state.value = _state.value.copy(lastError = "Not connected")
             return@withContext false
         }
-        // Re-send Adaptive unlock before Adaptive itself (Pro 2/3 requirement).
         try {
-            if (mode == NoiseMode.ADAPTIVE) {
+            val clamped = level.coerceIn(0, 100)
+            if (_state.value.mode != NoiseMode.ADAPTIVE) {
                 writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
                 writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
+                writeRaw(AacpPackets.setListeningMode(NoiseMode.ADAPTIVE))
             }
-            writeRaw(AacpPackets.setListeningMode(mode))
-            // Optimistic UI update; confirmation arrives via notification packet.
-            _state.value = _state.value.copy(mode = mode, lastError = null)
+            writeRaw(AacpPackets.setAdaptiveNoiseLevel(clamped))
+            _state.value = _state.value.copy(
+                mode = NoiseMode.ADAPTIVE,
+                adaptiveLevel = clamped,
+                lastError = null,
+            )
             true
         } catch (t: Throwable) {
-            Log.w(TAG, "setMode failed", t)
+            Log.w(TAG, "setAdaptiveLevel failed", t)
+            _state.value = _state.value.copy(lastError = t.message ?: t.javaClass.simpleName)
+            false
+        }
+    }
+
+    suspend fun setConversationalAwareness(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+        if (!_state.value.connected) {
+            _state.value = _state.value.copy(lastError = "Not connected")
+            return@withContext false
+        }
+        try {
+            writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
+            writeRaw(AacpPackets.setConversationalAwareness(enabled))
+            _state.value = _state.value.copy(conversationalAwareness = enabled, lastError = null)
+            true
+        } catch (t: Throwable) {
+            Log.w(TAG, "setCA failed", t)
             _state.value = _state.value.copy(lastError = t.message ?: t.javaClass.simpleName)
             false
         }
@@ -126,14 +178,15 @@ class AirPodsConnection(
                     )
                     break
                 }
-                val packet = buf.copyOf(n)
                 AacpPackets.parse(
-                    packet,
-                    onMode = { mode ->
-                        _state.value = _state.value.copy(mode = mode)
+                    buf.copyOf(n),
+                    onMode = { mode -> _state.value = _state.value.copy(mode = mode) },
+                    onBattery = { bat -> _state.value = _state.value.copy(battery = bat) },
+                    onConversationalAwareness = { en ->
+                        _state.value = _state.value.copy(conversationalAwareness = en)
                     },
-                    onBattery = { bat ->
-                        _state.value = _state.value.copy(battery = bat)
+                    onAdaptiveLevel = { level ->
+                        _state.value = _state.value.copy(adaptiveLevel = level.coerceIn(0, 100))
                     },
                 )
             }
@@ -151,18 +204,9 @@ class AirPodsConnection(
     private fun disconnectInternal() {
         readerJob?.cancel()
         readerJob = null
-        try {
-            input?.close()
-        } catch (_: Throwable) {
-        }
-        try {
-            output?.close()
-        } catch (_: Throwable) {
-        }
-        try {
-            socket?.close()
-        } catch (_: Throwable) {
-        }
+        try { input?.close() } catch (_: Throwable) {}
+        try { output?.close() } catch (_: Throwable) {}
+        try { socket?.close() } catch (_: Throwable) {}
         input = null
         output = null
         socket = null

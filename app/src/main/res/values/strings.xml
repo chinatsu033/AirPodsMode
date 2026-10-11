@@ -14,6 +14,29 @@
     <string name="mode_anc_desc">Block outside noise</string>
     <string name="mode_transparency_desc">Hear your surroundings</string>
     <string name="mode_adaptive_desc">Auto-blend ANC and transparency</string>
+    <string name="mode_adaptive_level_hint">Adaptive · strength %1$d — tap again for levels</string>
+    <string name="action_expand_adaptive">Expand Adaptive levels</string>
+
+    <string name="adaptive_more_transparency">More Transparency</string>
+    <string name="adaptive_more_transparency_desc">Let more sound through (level 0)</string>
+    <string name="adaptive_default">Adaptive</string>
+    <string name="adaptive_default_desc">Balanced mix (level 50)</string>
+    <string name="adaptive_more_anc">More Noise Cancellation</string>
+    <string name="adaptive_more_anc_desc">Filter more noise (level 100)</string>
+    <string name="adaptive_pro3_note">Note: AirPods Pro 3 may accept the Adaptive strength packet with little audible change (community reports).</string>
+
+    <string name="ca_title">Conversational Awareness</string>
+    <string name="ca_desc">Lower media volume when you start speaking</string>
+
+    <string name="spatial_title">Spatial Audio</string>
+    <string name="spatial_apple_note">Apple Spatial Audio (with head tracking) needs Apple’s HRTF pipeline and is not available without root on Android. This control never pretends it succeeded.</string>
+    <string name="spatial_system_available">This phone exposes Android Spatializer. You can try toggling it, or open system sound settings (Samsung 360 Audio is separate).</string>
+    <string name="spatial_open_settings_hint">Open system sound settings to check Samsung 360 Audio / spatial options.</string>
+    <string name="spatial_unavailable">Spatial Audio is not available on this device for AirPods.</string>
+    <string name="spatial_try_toggle">Try system Spatializer</string>
+    <string name="spatial_open_settings">Sound settings</string>
+    <string name="spatial_try_ok">System accepted the Spatializer call (not Apple Spatial Audio).</string>
+    <string name="spatial_try_failed">Could not change Spatializer (often needs privileged access). Use sound settings instead.</string>
 
     <string name="section_modes">Listening mode</string>
     <string name="action_connect">Connect</string>
@@ -40,5 +63,5 @@
     <string name="tile_active">Active</string>
     <string name="tile_tap_to_set">Tap to set</string>
 
-    <string name="hint_qs_tiles">Tip: pull down the Quick Settings panel, tap Edit, and add “AirPods Mode” (cycles ANC → Transparency → Adaptive) or the three individual tiles. Requires One UI 9 / Android 17 on Samsung without root. Pair AirPods in system Bluetooth first.</string>
+    <string name="hint_qs_tiles">Tip: pull down Quick Settings → Edit → add “AirPods Mode” (cycles ANC → Transparency → Adaptive) or the three individual tiles. Needs One UI 9 / Android 17 on Samsung without root. Pair AirPods in system Bluetooth first.</string>
 </resources>
