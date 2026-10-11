@@ -2,9 +2,10 @@
 <resources>
     <string name="app_name">AirPods 模式</string>
     <string name="app_tagline">控制 AirPods Pro 降噪模式</string>
+    <string name="action_back">返回</string>
 
     <string name="notification_channel_name">AirPods 连接</string>
-    <string name="notification_channel_desc">保持控制通道开启，供任务栏快捷开关使用</string>
+    <string name="notification_channel_desc">保持控制通道开启，供快捷开关与断开时记录位置</string>
 
     <string name="mode_anc">降噪</string>
     <string name="mode_transparency">通透</string>
@@ -27,16 +28,6 @@
 
     <string name="ca_title">对话感知</string>
     <string name="ca_desc">你开口说话时自动降低媒体音量</string>
-
-    <string name="spatial_title">空间音频</string>
-    <string name="spatial_apple_note">苹果空间音频（含头部跟踪）依赖 Apple 的 HRTF，安卓上不 Root 一般用不了。这里绝不会假装已经打开成功。</string>
-    <string name="spatial_system_available">这台手机提供了安卓 Spatializer。可以尝试切换，或打开系统声音设置（三星 360 音频是另一套）。</string>
-    <string name="spatial_open_settings_hint">可打开系统声音设置，查看三星 360 音频 / 空间音效选项。</string>
-    <string name="spatial_unavailable">这台设备无法为 AirPods 提供空间音频。</string>
-    <string name="spatial_try_toggle">尝试系统 Spatializer</string>
-    <string name="spatial_open_settings">声音设置</string>
-    <string name="spatial_try_ok">系统接受了 Spatializer 调用（不是苹果空间音频）。</string>
-    <string name="spatial_try_failed">无法更改 Spatializer（很多机型需要更高权限）。请改用声音设置。</string>
 
     <string name="section_modes">聆听模式</string>
     <string name="action_connect">连接</string>
@@ -63,5 +54,42 @@
     <string name="tile_active">使用中</string>
     <string name="tile_tap_to_set">点按切换</string>
 
-    <string name="hint_qs_tiles">提示：下拉控制中心 → 编辑 → 添加「AirPods 模式」（降噪 → 通透 → Adaptive 循环）或三个单独快捷开关。三星需要 One UI 9 / Android 17，不用 Root。请先在系统蓝牙里配对 AirPods。</string>
+    <string name="hint_qs_tiles">提示：控制中心 → 编辑 → 添加「AirPods 模式」或三个模式开关。请保留连接通知，这样断开时才能记录位置。需要 One UI 9 / Android 17，不用 Root。</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_background">背景</string>
+    <string name="settings_last_location">上次连接位置</string>
+    <string name="settings_battery">省电与自启动</string>
+    <string name="settings_about_findmy">查找</string>
+
+    <string name="bg_mode_wallpaper">系统壁纸</string>
+    <string name="bg_mode_custom">自定义图片</string>
+    <string name="bg_mode_solid">纯色</string>
+    <string name="bg_hint">毛玻璃卡片会叠在所选背景上。</string>
+    <string name="bg_pick_gallery">相册</string>
+    <string name="bg_use_wallpaper">壁纸</string>
+    <string name="bg_use_solid">纯色</string>
+
+    <string name="last_location_title">上次连接位置</string>
+    <string name="last_location_explain">苹果「查找」与耳机盒发声在安卓上无法实现（需要苹果网络与逆向/Root）。改为：当前台服务在运行时，AirPods 断开连接就保存 GPS。没有前台服务则无法记录。</string>
+    <string name="last_location_empty">还没有位置。请先让服务保持连接，再断开 AirPods。</string>
+    <string name="last_location_open_map">打开地图</string>
+    <string name="last_location_clear">清除</string>
+    <string name="last_location_grant">授予定位权限</string>
+
+    <string name="battery_ignored_yes">电池优化：已不受限</string>
+    <string name="battery_ignored_no">电池优化：仍受限</string>
+    <string name="battery_rationale">为了让快捷开关和断开定位可靠工作，请允许本应用忽略电池优化并在后台运行。</string>
+    <string name="battery_request">允许不受限电池使用</string>
+    <string name="samsung_autostart_guide">三星 One UI：设置 → 电池 → 后台使用限制——按需把本应用移出深度休眠；并打开「自动运行应用程序」（如有）。</string>
+    <string name="samsung_autostart_open">打开三星电池设置</string>
+
+    <string name="findmy_not_available">安卓上无法实现 AirPods 的「查找」（需要苹果网络与耳机盒扬声器，涉及逆向/Root）。请改用上方的「上次连接位置」。</string>
+
+    <string name="qs_bar_connected">AirPods 已连接</string>
+    <string name="qs_bar_disconnected">AirPods 未连接</string>
+    <string name="qs_adaptive_chooser_title">Adaptive 强度</string>
+    <string name="qs_resize_note">安卓 / 三星不允许第三方快捷开关像双卡切换条那样自由改尺寸。这个面板才是全宽控制；控制中心里的 Tile 仍是小图标+模式。</string>
+    <string name="qs_open_panel">控制条</string>
+    <string name="qs_notification_hint">点通知打开类似双卡条的全宽控制。快捷操作：通透 · Adaptive · 降噪。</string>
 </resources>

@@ -14,7 +14,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bluetooth
@@ -36,15 +36,16 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Hearing
-import androidx.compose.material.icons.outlined.SpatialAudio
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.ripple
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -70,7 +72,8 @@ import io.github.chinatsu033.airpodsmode.R
 import io.github.chinatsu033.airpodsmode.aacp.AdaptiveNoisePreset
 import io.github.chinatsu033.airpodsmode.aacp.NoiseMode
 import io.github.chinatsu033.airpodsmode.bt.AirPodsConnection
-import io.github.chinatsu033.airpodsmode.util.SpatialAudioHelper
+import io.github.chinatsu033.airpodsmode.bt.AirPodsModel
+import io.github.chinatsu033.airpodsmode.util.AppPreferences
 import io.github.chinatsu033.airpodsmode.util.WallpaperLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -79,58 +82,47 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AirPodsModeAppScreen(
     connection: AirPodsConnection,
+    prefs: AppPreferences,
     permissionsReady: Boolean,
+    backgroundEpoch: Int,
+    onOpenSettings: () -> Unit,
     onRequestPermissions: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onSetMode: (NoiseMode) -> Unit,
     onSetAdaptiveLevel: (Int) -> Unit,
     onSetConversationalAwareness: (Boolean) -> Unit,
-    onOpenSoundSettings: () -> Unit,
-    onTrySpatializer: (Boolean) -> Boolean,
 ) {
     val state by connection.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var wallpaper by remember { mutableStateOf<Bitmap?>(null) }
     var adaptiveExpanded by remember { mutableStateOf(false) }
-    val spatialStatus = remember { SpatialAudioHelper.probe(context) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(backgroundEpoch) {
         wallpaper = withContext(Dispatchers.IO) {
-            WallpaperLoader.softBlur(WallpaperLoader.load(context))
+            WallpaperLoader.softBlur(WallpaperLoader.loadForPrefs(context, prefs))
         }
     }
 
-    // Collapse adaptive panel when leaving Adaptive mode.
     LaunchedEffect(state.mode) {
         if (state.mode != NoiseMode.ADAPTIVE) adaptiveExpanded = false
     }
 
+    val model = state.model
+
     Box(Modifier.fillMaxSize()) {
-        // Wallpaper / fallback backdrop
         val bmp = wallpaper
         if (bmp != null) {
             Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(18.dp),
+                modifier = Modifier.fillMaxSize().blur(22.dp),
                 contentScale = ContentScale.Crop,
             )
         } else {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)),
-            )
+            Box(Modifier.fillMaxSize().background(Color(0xFF2A3D34)))
         }
-        // Soft scrim for readability
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.18f)),
-        )
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.22f)))
 
         Scaffold(
             containerColor = Color.Transparent,
@@ -144,9 +136,19 @@ fun AirPodsModeAppScreen(
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
                             Text(
-                                text = stringResource(R.string.app_tagline),
+                                text = state.model.displayName.takeIf { state.connected || state.deviceName != null }
+                                    ?: stringResource(R.string.app_tagline),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.settings_title),
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                     },
@@ -165,29 +167,54 @@ fun AirPodsModeAppScreen(
                 StatusGlass(state, permissionsReady)
 
                 if (!permissionsReady) {
-                    GlassActionButton(
-                        text = stringResource(R.string.action_grant_permissions),
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        selected = true,
+                        corner = 18.dp,
                         onClick = onRequestPermissions,
-                    )
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                stringResource(R.string.action_grant_permissions),
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    }
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        GlassActionButton(
-                            text = if (state.connected) {
-                                stringResource(R.string.action_reconnect)
-                            } else {
-                                stringResource(R.string.action_connect)
-                            },
+                        GlassCard(
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            selected = true,
+                            corner = 18.dp,
                             onClick = onConnect,
-                            modifier = Modifier.weight(1f),
                             enabled = !state.connecting,
-                        )
-                        GlassActionButton(
-                            text = stringResource(R.string.action_disconnect),
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    if (state.connected) stringResource(R.string.action_reconnect)
+                                    else stringResource(R.string.action_connect),
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        }
+                        GlassCard(
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            corner = 18.dp,
                             onClick = onDisconnect,
-                            modifier = Modifier.weight(1f),
                             enabled = state.connected || state.connecting,
-                            outlined = true,
-                        )
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    stringResource(R.string.action_disconnect),
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(
+                                        alpha = if (state.connected || state.connecting) 1f else 0.45f,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -198,69 +225,64 @@ fun AirPodsModeAppScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
 
-                ModeGlassButton(
-                    title = stringResource(R.string.mode_anc),
-                    subtitle = stringResource(R.string.mode_anc_desc),
-                    selected = state.mode == NoiseMode.ANC,
-                    enabled = state.connected,
-                    onClick = {
-                        adaptiveExpanded = false
-                        onSetMode(NoiseMode.ANC)
-                    },
-                )
-                ModeGlassButton(
-                    title = stringResource(R.string.mode_transparency),
-                    subtitle = stringResource(R.string.mode_transparency_desc),
-                    selected = state.mode == NoiseMode.TRANSPARENCY,
-                    enabled = state.connected,
-                    onClick = {
-                        adaptiveExpanded = false
-                        onSetMode(NoiseMode.TRANSPARENCY)
-                    },
-                )
-
-                AdaptiveModeSection(
-                    selected = state.mode == NoiseMode.ADAPTIVE,
-                    enabled = state.connected,
-                    expanded = adaptiveExpanded,
-                    adaptiveLevel = state.adaptiveLevel,
-                    onPrimaryClick = {
-                        if (state.mode != NoiseMode.ADAPTIVE) {
-                            onSetMode(NoiseMode.ADAPTIVE)
-                            // First tap: enter Adaptive at mid, keep panel collapsed.
+                if (model.supportsAnc) {
+                    ModeGlassButton(
+                        title = stringResource(R.string.mode_anc),
+                        subtitle = stringResource(R.string.mode_anc_desc),
+                        selected = state.mode == NoiseMode.ANC,
+                        enabled = state.connected,
+                        onClick = {
                             adaptiveExpanded = false
-                        } else {
-                            adaptiveExpanded = !adaptiveExpanded
-                        }
-                    },
-                    onLongPress = {
-                        if (state.mode != NoiseMode.ADAPTIVE) {
-                            onSetMode(NoiseMode.ADAPTIVE)
-                        }
-                        adaptiveExpanded = true
-                    },
-                    onToggleExpand = {
-                        if (state.mode != NoiseMode.ADAPTIVE) {
-                            onSetMode(NoiseMode.ADAPTIVE)
-                        }
-                        adaptiveExpanded = !adaptiveExpanded
-                    },
-                    onPickLevel = { level ->
-                        onSetAdaptiveLevel(level)
-                    },
-                )
+                            onSetMode(NoiseMode.ANC)
+                        },
+                    )
+                }
+                if (model.supportsTransparency) {
+                    ModeGlassButton(
+                        title = stringResource(R.string.mode_transparency),
+                        subtitle = stringResource(R.string.mode_transparency_desc),
+                        selected = state.mode == NoiseMode.TRANSPARENCY,
+                        enabled = state.connected,
+                        onClick = {
+                            adaptiveExpanded = false
+                            onSetMode(NoiseMode.TRANSPARENCY)
+                        },
+                    )
+                }
+                if (model.supportsAdaptive) {
+                    AdaptiveModeSection(
+                        selected = state.mode == NoiseMode.ADAPTIVE,
+                        enabled = state.connected,
+                        expanded = adaptiveExpanded && model.supportsAdaptiveStrength,
+                        showStrength = model.supportsAdaptiveStrength,
+                        adaptiveLevel = state.adaptiveLevel,
+                        onPrimaryClick = {
+                            if (state.mode != NoiseMode.ADAPTIVE) {
+                                onSetMode(NoiseMode.ADAPTIVE)
+                                adaptiveExpanded = false
+                            } else if (model.supportsAdaptiveStrength) {
+                                adaptiveExpanded = !adaptiveExpanded
+                            }
+                        },
+                        onLongPress = {
+                            if (state.mode != NoiseMode.ADAPTIVE) onSetMode(NoiseMode.ADAPTIVE)
+                            if (model.supportsAdaptiveStrength) adaptiveExpanded = true
+                        },
+                        onToggleExpand = {
+                            if (state.mode != NoiseMode.ADAPTIVE) onSetMode(NoiseMode.ADAPTIVE)
+                            if (model.supportsAdaptiveStrength) adaptiveExpanded = !adaptiveExpanded
+                        },
+                        onPickLevel = onSetAdaptiveLevel,
+                    )
+                }
 
-                ConversationalAwarenessCard(
-                    enabled = state.connected,
-                    checked = state.conversationalAwareness == true,
-                    onCheckedChange = onSetConversationalAwareness,
-                )
-
-                SpatialAudioCard(
-                    status = spatialStatus,
-                    onOpenSettings = onOpenSoundSettings,
-                    onTryToggle = onTrySpatializer,
-                )
+                if (model.supportsConversationalAwareness) {
+                    ConversationalAwarenessCard(
+                        enabled = state.connected,
+                        checked = state.conversationalAwareness == true,
+                        onCheckedChange = onSetConversationalAwareness,
+                    )
+                }
 
                 HintGlass()
                 Spacer(Modifier.height(28.dp))
@@ -290,14 +312,24 @@ private fun StatusGlass(state: AirPodsConnection.State, permissionsReady: Boolea
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
+                    val detail = buildString {
+                        append(
+                            when {
+                                !permissionsReady -> stringResource(R.string.status_need_permission)
+                                state.connecting -> stringResource(R.string.status_connecting)
+                                state.connected -> stringResource(R.string.status_connected)
+                                state.lastError != null -> stringResource(R.string.status_error_short)
+                                else -> stringResource(R.string.status_disconnected)
+                            },
+                        )
+                        if (state.model != AirPodsModel.UNKNOWN || state.modelNumber != null) {
+                            append(" · ")
+                            append(state.model.displayName)
+                            state.modelNumber?.let { append(" ($it)") }
+                        }
+                    }
                     Text(
-                        text = when {
-                            !permissionsReady -> stringResource(R.string.status_need_permission)
-                            state.connecting -> stringResource(R.string.status_connecting)
-                            state.connected -> stringResource(R.string.status_connected)
-                            state.lastError != null -> stringResource(R.string.status_error_short)
-                            else -> stringResource(R.string.status_disconnected)
-                        },
+                        text = detail,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
                     )
@@ -318,11 +350,7 @@ private fun StatusGlass(state: AirPodsConnection.State, permissionsReady: Boolea
                 }
             }
             state.lastError?.takeIf { !state.connected }?.let { err ->
-                Text(
-                    text = err,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+                Text(text = err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -337,44 +365,23 @@ private fun ModeGlassButton(
     onClick: () -> Unit,
 ) {
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(88.dp)
-            .clickable(enabled = enabled, onClick = onClick),
+        modifier = Modifier.fillMaxWidth().height(88.dp),
         selected = selected,
+        onClick = onClick,
+        enabled = enabled,
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Headphones,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(30.dp),
-            )
+            Icon(Icons.Outlined.Headphones, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(30.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
-                )
+                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f))
             }
             if (selected) {
-                Text(
-                    text = stringResource(R.string.tile_active),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium,
-                )
+                Text(stringResource(R.string.tile_active), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -386,6 +393,7 @@ private fun AdaptiveModeSection(
     selected: Boolean,
     enabled: Boolean,
     expanded: Boolean,
+    showStrength: Boolean,
     adaptiveLevel: Int,
     onPrimaryClick: () -> Unit,
     onLongPress: () -> Unit,
@@ -393,91 +401,71 @@ private fun AdaptiveModeSection(
     onPickLevel: (Int) -> Unit,
 ) {
     val preset = AdaptiveNoisePreset.nearest(adaptiveLevel)
+    val shape = RoundedCornerShape(GlassCorner)
+    val interaction = remember { MutableInteractionSource() }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        GlassCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(88.dp)
-                .combinedClickable(
-                    enabled = enabled,
-                    onClick = onPrimaryClick,
-                    onLongClick = onLongPress,
-                ),
-            selected = selected,
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth().height(88.dp), selected = selected) {
             Row(
-                Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .combinedClickable(
+                        enabled = enabled,
+                        interactionSource = interaction,
+                        indication = ripple(bounded = true),
+                        onClick = onPrimaryClick,
+                        onLongClick = onLongPress,
+                    )
+                    .padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Headphones,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(30.dp),
-                )
+                Icon(Icons.Outlined.Headphones, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(30.dp))
                 Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.mode_adaptive), fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground)
                     Text(
-                        text = stringResource(R.string.mode_adaptive),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = if (selected) {
-                            stringResource(R.string.mode_adaptive_level_hint, adaptiveLevel)
-                        } else {
-                            stringResource(R.string.mode_adaptive_desc)
+                        text = when {
+                            selected && showStrength -> stringResource(R.string.mode_adaptive_level_hint, adaptiveLevel)
+                            else -> stringResource(R.string.mode_adaptive_desc)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
                     )
                 }
-                Icon(
-                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                    contentDescription = stringResource(R.string.action_expand_adaptive),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clickable(enabled = enabled, onClick = onToggleExpand),
-                )
+                if (showStrength) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        contentDescription = stringResource(R.string.action_expand_adaptive),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
             }
         }
 
         AnimatedVisibility(
-            visible = expanded && selected,
-            enter = fadeIn(tween(180)) + expandVertically(spring(stiffness = Spring.StiffnessMediumLow)) +
-                scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = 0.75f)),
-            exit = fadeOut(tween(140)) + shrinkVertically() + scaleOut(targetScale = 0.94f),
+            visible = expanded && selected && showStrength,
+            enter = fadeIn(tween(180)) + expandVertically(
+                spring(stiffness = Spring.StiffnessMediumLow),
+                clip = true,
+            ) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.78f)),
+            exit = fadeOut(tween(140)) + shrinkVertically(clip = true) + scaleOut(targetScale = 0.96f),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AdaptiveLevelCard(
-                    title = stringResource(R.string.adaptive_more_transparency),
-                    subtitle = stringResource(R.string.adaptive_more_transparency_desc),
-                    selected = preset == AdaptiveNoisePreset.MORE_TRANSPARENCY,
-                    enabled = enabled,
-                    delayIndex = 0,
-                    onClick = { onPickLevel(AdaptiveNoisePreset.MORE_TRANSPARENCY.level) },
-                )
-                AdaptiveLevelCard(
-                    title = stringResource(R.string.adaptive_default),
-                    subtitle = stringResource(R.string.adaptive_default_desc),
-                    selected = preset == AdaptiveNoisePreset.DEFAULT,
-                    enabled = enabled,
-                    delayIndex = 1,
-                    onClick = { onPickLevel(AdaptiveNoisePreset.DEFAULT.level) },
-                )
-                AdaptiveLevelCard(
-                    title = stringResource(R.string.adaptive_more_anc),
-                    subtitle = stringResource(R.string.adaptive_more_anc_desc),
-                    selected = preset == AdaptiveNoisePreset.MORE_ANC,
-                    enabled = enabled,
-                    delayIndex = 2,
-                    onClick = { onPickLevel(AdaptiveNoisePreset.MORE_ANC.level) },
-                )
+            Column(
+                Modifier.clip(RoundedCornerShape(24.dp)),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AdaptiveLevelCard(stringResource(R.string.adaptive_more_transparency), stringResource(R.string.adaptive_more_transparency_desc), preset == AdaptiveNoisePreset.MORE_TRANSPARENCY, enabled, 0) {
+                    onPickLevel(0)
+                }
+                AdaptiveLevelCard(stringResource(R.string.adaptive_default), stringResource(R.string.adaptive_default_desc), preset == AdaptiveNoisePreset.DEFAULT, enabled, 1) {
+                    onPickLevel(50)
+                }
+                AdaptiveLevelCard(stringResource(R.string.adaptive_more_anc), stringResource(R.string.adaptive_more_anc_desc), preset == AdaptiveNoisePreset.MORE_ANC, enabled, 2) {
+                    onPickLevel(100)
+                }
                 Text(
-                    text = stringResource(R.string.adaptive_pro3_note),
+                    stringResource(R.string.adaptive_pro3_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -498,11 +486,8 @@ private fun AdaptiveLevelCard(
 ) {
     val appear by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = spring(
-            dampingRatio = 0.72f,
-            stiffness = Spring.StiffnessMediumLow - delayIndex * 80,
-        ),
-        label = "adaptiveCard$delayIndex",
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow - delayIndex * 80),
+        label = "lvl$delayIndex",
     )
     GlassCard(
         modifier = Modifier
@@ -512,22 +497,15 @@ private fun AdaptiveLevelCard(
                 scaleX = 0.96f + 0.04f * appear
                 scaleY = 0.96f + 0.04f * appear
                 translationY = (1f - appear) * (8f + delayIndex * 6f)
-            }
-            .clickable(enabled = enabled, onClick = onClick),
+            },
         selected = selected,
         corner = 22.dp,
+        onClick = onClick,
+        enabled = enabled,
     ) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            )
+            Text(title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
         }
     }
 }
@@ -540,142 +518,20 @@ private fun ConversationalAwarenessCard(
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                Icons.Outlined.Hearing,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-            )
+            Icon(Icons.Outlined.Hearing, null, tint = MaterialTheme.colorScheme.onBackground)
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.ca_title),
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = stringResource(R.string.ca_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                )
+                Text(stringResource(R.string.ca_title), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(R.string.ca_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
             }
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 enabled = enabled,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun SpatialAudioCard(
-    status: SpatialAudioHelper.Status,
-    onOpenSettings: () -> Unit,
-    onTryToggle: (Boolean) -> Boolean,
-) {
-    var tried by remember { mutableStateOf(false) }
-    var tryOk by remember { mutableStateOf<Boolean?>(null) }
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(
-                    Icons.Outlined.SpatialAudio,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.spatial_title),
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = when (status.explanationResHint) {
-                            SpatialAudioHelper.Explanation.SYSTEM_SPATIALIZER ->
-                                stringResource(R.string.spatial_system_available)
-                            SpatialAudioHelper.Explanation.OPEN_SOUND_SETTINGS ->
-                                stringResource(R.string.spatial_open_settings_hint)
-                            SpatialAudioHelper.Explanation.UNAVAILABLE ->
-                                stringResource(R.string.spatial_unavailable)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                    )
-                }
-            }
-            Text(
-                text = stringResource(R.string.spatial_apple_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (status.spatializerAvailable) {
-                    TextButton(onClick = {
-                        tried = true
-                        tryOk = onTryToggle(!(status.spatializerEnabled ?: false))
-                    }) {
-                        Text(stringResource(R.string.spatial_try_toggle))
-                    }
-                }
-                if (status.canOpenSystemSettings) {
-                    TextButton(onClick = onOpenSettings) {
-                        Text(stringResource(R.string.spatial_open_settings))
-                    }
-                }
-            }
-            if (tried) {
-                Text(
-                    text = if (tryOk == true) {
-                        stringResource(R.string.spatial_try_ok)
-                    } else {
-                        stringResource(R.string.spatial_try_failed)
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun GlassActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    outlined: Boolean = false,
-) {
-    GlassCard(
-        modifier = modifier
-            .height(48.dp)
-            .clickable(
-                enabled = enabled,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onClick,
-            ),
-        selected = !outlined && enabled,
-        corner = 18.dp,
-    ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground.copy(
-                    alpha = if (enabled) 1f else 0.45f,
-                ),
+                colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
             )
         }
     }

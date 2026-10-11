@@ -1,9 +1,8 @@
 package io.github.chinatsu033.airpodsmode.aacp
 
 /**
- * AACP packet builders/parsers reimplemented from public AACP docs
- * (LibrePods AAP Definitions / control_commands). No GPL source copied.
- * Transport: classic Bluetooth L2CAP PSM 0x1001.
+ * AACP packet builders/parsers reimplemented from public AACP docs.
+ * No LibrePods GPL source copied. Transport: L2CAP PSM 0x1001.
  */
 object AacpPackets {
     const val L2CAP_PSM: Int = 0x1001
@@ -13,7 +12,6 @@ object AacpPackets {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     )
 
-    /** Unlocks Adaptive + conversational awareness while audio plays (Pro 2/3 / AirPods 4 ANC). */
     val FEATURE_ENABLE_PRO2: ByteArray = byteArrayOf(
         0x04, 0x00, 0x04, 0x00, 0x4D, 0x00, 0xFF.toByte(),
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -24,20 +22,14 @@ object AacpPackets {
         0xFF.toByte(), 0xFF.toByte(), 0xFE.toByte(), 0xFF.toByte(),
     )
 
-    /** Off|ANC|Transparency|Adaptive */
     val LISTENING_MODE_CONFIGS_ALL: ByteArray = controlCommand(id = 0x1A, data1 = 0x0F)
 
     fun setListeningMode(mode: NoiseMode): ByteArray =
         controlCommand(id = 0x0D, data1 = mode.wireValue.toInt() and 0xFF)
 
-    /**
-     * Adaptive Audio Noise strength (control id 0x2E). 0 = more transparency,
-     * 100 = more ANC. Only effective while listening mode is Adaptive.
-     */
     fun setAdaptiveNoiseLevel(level: Int): ByteArray =
         controlCommand(id = 0x2E, data1 = level.coerceIn(0, 100))
 
-    /** Conversational Awareness: 0x01 on, 0x02 off (control id 0x28). */
     fun setConversationalAwareness(enabled: Boolean): ByteArray =
         controlCommand(id = 0x28, data1 = if (enabled) 0x01 else 0x02)
 
@@ -56,12 +48,21 @@ object AacpPackets {
         val casePercent: Int? = null,
     )
 
+    data class DeviceInfo(
+        val advertisingName: String? = null,
+        val modelNumber: String? = null,
+        val manufacturer: String? = null,
+        val serial: String? = null,
+        val firmware: String? = null,
+    )
+
     fun parse(
         packet: ByteArray,
         onMode: (NoiseMode) -> Unit,
         onBattery: (BatteryStatus) -> Unit,
         onConversationalAwareness: (Boolean) -> Unit = {},
         onAdaptiveLevel: (Int) -> Unit = {},
+        onDeviceInfo: (DeviceInfo) -> Unit = {},
     ): Boolean {
         if (packet.size < 6) return false
         if (packet[0] != 0x04.toByte() || packet[2] != 0x04.toByte()) return false
@@ -106,12 +107,55 @@ object AacpPackets {
                 onBattery(BatteryStatus(left, right, case))
                 return true
             }
+            0x001D -> {
+                // Metadata: null-terminated UTF-8 strings after opcode.
+                val strings = parseNullTerminatedStrings(packet, start = 6)
+                if (strings.isNotEmpty()) {
+                    onDeviceInfo(
+                        DeviceInfo(
+                            advertisingName = strings.getOrNull(0),
+                            modelNumber = strings.getOrNull(1),
+                            manufacturer = strings.getOrNull(2),
+                            serial = strings.getOrNull(3),
+                            firmware = strings.getOrNull(4),
+                        ),
+                    )
+                    return true
+                }
+            }
         }
         return false
     }
+
+    private fun parseNullTerminatedStrings(packet: ByteArray, start: Int): List<String> {
+        val out = mutableListOf<String>()
+        var i = start
+        // Skip leading non-printable / length prefixes sometimes present (00 02 d5 00 04 …)
+        while (i < packet.size && (packet[i].toInt() and 0xFF) < 0x20) i++
+        val chunk = StringBuilder()
+        while (i < packet.size && out.size < 8) {
+            val b = packet[i].toInt() and 0xFF
+            if (b == 0) {
+                if (chunk.isNotEmpty()) {
+                    out += chunk.toString()
+                    chunk.clear()
+                }
+                i++
+                continue
+            }
+            if (b in 0x20..0x7E || b >= 0x80) {
+                chunk.append(b.toChar())
+            } else if (chunk.isNotEmpty()) {
+                out += chunk.toString()
+                chunk.clear()
+            }
+            i++
+        }
+        if (chunk.isNotEmpty()) out += chunk.toString()
+        return out
+    }
 }
 
-/** Presets for the Adaptive 3-way panel (iOS-like). */
 enum class AdaptiveNoisePreset(val level: Int) {
     MORE_TRANSPARENCY(0),
     DEFAULT(50),

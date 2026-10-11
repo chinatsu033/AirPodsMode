@@ -2,9 +2,10 @@
 <resources>
     <string name="app_name">AirPods Mode</string>
     <string name="app_tagline">Noise control for AirPods Pro</string>
+    <string name="action_back">Back</string>
 
     <string name="notification_channel_name">AirPods connection</string>
-    <string name="notification_channel_desc">Keeps the control channel open for Quick Settings tiles</string>
+    <string name="notification_channel_desc">Keeps the control channel open for Quick Settings and last-location capture</string>
 
     <string name="mode_anc">Noise Cancellation</string>
     <string name="mode_transparency">Transparency</string>
@@ -27,16 +28,6 @@
 
     <string name="ca_title">Conversational Awareness</string>
     <string name="ca_desc">Lower media volume when you start speaking</string>
-
-    <string name="spatial_title">Spatial Audio</string>
-    <string name="spatial_apple_note">Apple Spatial Audio (with head tracking) needs Apple’s HRTF pipeline and is not available without root on Android. This control never pretends it succeeded.</string>
-    <string name="spatial_system_available">This phone exposes Android Spatializer. You can try toggling it, or open system sound settings (Samsung 360 Audio is separate).</string>
-    <string name="spatial_open_settings_hint">Open system sound settings to check Samsung 360 Audio / spatial options.</string>
-    <string name="spatial_unavailable">Spatial Audio is not available on this device for AirPods.</string>
-    <string name="spatial_try_toggle">Try system Spatializer</string>
-    <string name="spatial_open_settings">Sound settings</string>
-    <string name="spatial_try_ok">System accepted the Spatializer call (not Apple Spatial Audio).</string>
-    <string name="spatial_try_failed">Could not change Spatializer (often needs privileged access). Use sound settings instead.</string>
 
     <string name="section_modes">Listening mode</string>
     <string name="action_connect">Connect</string>
@@ -63,5 +54,42 @@
     <string name="tile_active">Active</string>
     <string name="tile_tap_to_set">Tap to set</string>
 
-    <string name="hint_qs_tiles">Tip: pull down Quick Settings → Edit → add “AirPods Mode” (cycles ANC → Transparency → Adaptive) or the three individual tiles. Needs One UI 9 / Android 17 on Samsung without root. Pair AirPods in system Bluetooth first.</string>
+    <string name="hint_qs_tiles">Tip: Quick Settings → Edit → add “AirPods Mode” or the three mode tiles. Keep the connection notification so last-location can be saved on disconnect. One UI 9 / Android 17, no root.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_background">Background</string>
+    <string name="settings_last_location">Last connected location</string>
+    <string name="settings_battery">Battery &amp; autostart</string>
+    <string name="settings_about_findmy">Find My</string>
+
+    <string name="bg_mode_wallpaper">System wallpaper</string>
+    <string name="bg_mode_custom">Custom image</string>
+    <string name="bg_mode_solid">Solid color</string>
+    <string name="bg_hint">Liquid-glass cards sit on top of this background.</string>
+    <string name="bg_pick_gallery">Gallery</string>
+    <string name="bg_use_wallpaper">Wallpaper</string>
+    <string name="bg_use_solid">Solid</string>
+
+    <string name="last_location_title">Last Connected Location</string>
+    <string name="last_location_explain">Apple Find My / case sound is not available without Apple’s network and reverse-engineering. Instead, when your AirPods disconnect while this app’s foreground service is running, we save GPS coordinates. Without the service, location cannot be recorded.</string>
+    <string name="last_location_empty">No location saved yet. Connect AirPods with the service running, then disconnect.</string>
+    <string name="last_location_open_map">Open map</string>
+    <string name="last_location_clear">Clear</string>
+    <string name="last_location_grant">Grant location permission</string>
+
+    <string name="battery_ignored_yes">Battery optimization: unrestricted</string>
+    <string name="battery_ignored_no">Battery optimization: restricted</string>
+    <string name="battery_rationale">To keep Quick Settings tiles and last-location working, allow the app to ignore battery optimizations and stay in the background.</string>
+    <string name="battery_request">Allow unrestricted battery</string>
+    <string name="samsung_autostart_guide">Samsung One UI: Settings → Battery → Background usage limits — remove this app from sleeping/never-sleeping lists as needed; also enable Auto run (自动运行应用程序) if shown.</string>
+    <string name="samsung_autostart_open">Open Samsung battery settings</string>
+
+    <string name="findmy_not_available">Find My for AirPods cannot be implemented on Android without Apple’s network and case speakers (needs reverse engineering / root). Use Last Connected Location above instead.</string>
+
+    <string name="qs_bar_connected">AirPods Connected</string>
+    <string name="qs_bar_disconnected">AirPods Disconnected</string>
+    <string name="qs_adaptive_chooser_title">Adaptive strength</string>
+    <string name="qs_resize_note">Android / Samsung do not let third-party Quick Settings tiles freely resize like the Dual SIM bar. This panel is the full-width control; the QS tile stays compact (icon + mode).</string>
+    <string name="qs_open_panel">Control bar</string>
+    <string name="qs_notification_hint">Tap notification for the full SIM-style control bar. Actions: Transparency · Adaptive · Noise Cancellation.</string>
 </resources>

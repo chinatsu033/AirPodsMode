@@ -28,6 +28,9 @@ class AirPodsConnection(
         val connected: Boolean = false,
         val deviceName: String? = null,
         val deviceAddress: String? = null,
+        val model: AirPodsModel = AirPodsModel.UNKNOWN,
+        val modelNumber: String? = null,
+        val firmware: String? = null,
         val mode: NoiseMode? = null,
         val adaptiveLevel: Int = AdaptiveNoisePreset.DEFAULT.level,
         val conversationalAwareness: Boolean? = null,
@@ -44,42 +47,47 @@ class AirPodsConnection(
     private var input: InputStream? = null
     private var output: OutputStream? = null
     private var readerJob: Job? = null
+    private var productIdHint: Int? = null
 
     @SuppressLint("MissingPermission")
-    suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
-        disconnectInternal()
-        _state.value = _state.value.copy(
-            connecting = true,
-            lastError = null,
-            deviceName = device.name,
-            deviceAddress = device.address,
-        )
-        try {
-            val sock = L2capSocketFactory.open(device, AacpPackets.L2CAP_PSM)
-            sock.connect()
-            socket = sock
-            input = sock.inputStream
-            output = sock.outputStream
-
-            writeRaw(AacpPackets.HANDSHAKE)
-            writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
-            writeRaw(AacpPackets.REQUEST_NOTIFICATIONS)
-            writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
-
-            _state.value = _state.value.copy(connected = true, connecting = false, lastError = null)
-            startReader()
-            true
-        } catch (t: Throwable) {
-            Log.w(TAG, "connect failed", t)
-            disconnectInternal()
+    suspend fun connect(device: BluetoothDevice, productId: Int? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            disconnectInternal(clearIdentity = false)
+            productIdHint = productId
+            val nameGuess = AirPodsModel.resolve(productId, null, device.name)
             _state.value = _state.value.copy(
-                connected = false,
-                connecting = false,
-                lastError = t.message ?: t.javaClass.simpleName,
+                connecting = true,
+                lastError = null,
+                deviceName = device.name,
+                deviceAddress = device.address,
+                model = nameGuess,
             )
-            false
+            try {
+                val sock = L2capSocketFactory.open(device, AacpPackets.L2CAP_PSM)
+                sock.connect()
+                socket = sock
+                input = sock.inputStream
+                output = sock.outputStream
+
+                writeRaw(AacpPackets.HANDSHAKE)
+                writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
+                writeRaw(AacpPackets.REQUEST_NOTIFICATIONS)
+                writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
+
+                _state.value = _state.value.copy(connected = true, connecting = false, lastError = null)
+                startReader()
+                true
+            } catch (t: Throwable) {
+                Log.w(TAG, "connect failed", t)
+                disconnectInternal(clearIdentity = false)
+                _state.value = _state.value.copy(
+                    connected = false,
+                    connecting = false,
+                    lastError = t.message ?: t.javaClass.simpleName,
+                )
+                false
+            }
         }
-    }
 
     suspend fun setMode(mode: NoiseMode, adaptiveLevel: Int? = null): Boolean =
         withContext(Dispatchers.IO) {
@@ -87,21 +95,20 @@ class AirPodsConnection(
                 _state.value = _state.value.copy(lastError = "Not connected")
                 return@withContext false
             }
+            val model = _state.value.model
+            if (mode == NoiseMode.ANC && !model.supportsAnc) return@withContext false
+            if (mode == NoiseMode.TRANSPARENCY && !model.supportsTransparency) return@withContext false
+            if (mode == NoiseMode.ADAPTIVE && !model.supportsAdaptive) return@withContext false
             try {
                 if (mode == NoiseMode.ADAPTIVE) {
                     writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
                     writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
                 }
                 writeRaw(AacpPackets.setListeningMode(mode))
-                val level = adaptiveLevel ?: _state.value.adaptiveLevel
-                if (mode == NoiseMode.ADAPTIVE) {
-                    val clamped = level.coerceIn(0, 100)
+                if (mode == NoiseMode.ADAPTIVE && model.supportsAdaptiveStrength) {
+                    val clamped = (adaptiveLevel ?: _state.value.adaptiveLevel).coerceIn(0, 100)
                     writeRaw(AacpPackets.setAdaptiveNoiseLevel(clamped))
-                    _state.value = _state.value.copy(
-                        mode = mode,
-                        adaptiveLevel = clamped,
-                        lastError = null,
-                    )
+                    _state.value = _state.value.copy(mode = mode, adaptiveLevel = clamped, lastError = null)
                 } else {
                     _state.value = _state.value.copy(mode = mode, lastError = null)
                 }
@@ -114,8 +121,7 @@ class AirPodsConnection(
         }
 
     suspend fun setAdaptiveLevel(level: Int): Boolean = withContext(Dispatchers.IO) {
-        if (!_state.value.connected) {
-            _state.value = _state.value.copy(lastError = "Not connected")
+        if (!_state.value.connected || !_state.value.model.supportsAdaptiveStrength) {
             return@withContext false
         }
         try {
@@ -140,8 +146,7 @@ class AirPodsConnection(
     }
 
     suspend fun setConversationalAwareness(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
-        if (!_state.value.connected) {
-            _state.value = _state.value.copy(lastError = "Not connected")
+        if (!_state.value.connected || !_state.value.model.supportsConversationalAwareness) {
             return@withContext false
         }
         try {
@@ -157,13 +162,13 @@ class AirPodsConnection(
     }
 
     fun disconnect() {
-        scope.launch(Dispatchers.IO) { disconnectInternal() }
+        scope.launch(Dispatchers.IO) { disconnectInternal(clearIdentity = false) }
     }
 
     private fun startReader() {
         readerJob?.cancel()
         readerJob = scope.launch(Dispatchers.IO) {
-            val buf = ByteArray(1024)
+            val buf = ByteArray(2048)
             val stream = input ?: return@launch
             while (isActive) {
                 val n = try {
@@ -188,6 +193,19 @@ class AirPodsConnection(
                     onAdaptiveLevel = { level ->
                         _state.value = _state.value.copy(adaptiveLevel = level.coerceIn(0, 100))
                     },
+                    onDeviceInfo = { info ->
+                        val model = AirPodsModel.resolve(
+                            productIdHint,
+                            info.modelNumber,
+                            info.advertisingName ?: _state.value.deviceName,
+                        )
+                        _state.value = _state.value.copy(
+                            model = model,
+                            modelNumber = info.modelNumber,
+                            firmware = info.firmware,
+                            deviceName = info.advertisingName ?: _state.value.deviceName,
+                        )
+                    },
                 )
             }
         }
@@ -201,7 +219,7 @@ class AirPodsConnection(
         }
     }
 
-    private fun disconnectInternal() {
+    private fun disconnectInternal(clearIdentity: Boolean) {
         readerJob?.cancel()
         readerJob = null
         try { input?.close() } catch (_: Throwable) {}
@@ -210,7 +228,11 @@ class AirPodsConnection(
         input = null
         output = null
         socket = null
-        _state.value = _state.value.copy(connected = false, connecting = false)
+        _state.value = if (clearIdentity) {
+            State()
+        } else {
+            _state.value.copy(connected = false, connecting = false)
+        }
     }
 
     companion object {

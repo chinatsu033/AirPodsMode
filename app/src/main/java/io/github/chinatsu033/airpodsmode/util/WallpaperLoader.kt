@@ -3,31 +3,73 @@ package io.github.chinatsu033.airpodsmode.util
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
+import android.net.Uri
 import android.util.Log
 import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.max
 
 object WallpaperLoader {
     private const val TAG = "WallpaperLoader"
-    private const val MAX_EDGE = 1080
+    private const val MAX_EDGE = 1440
 
-    fun load(context: Context): Bitmap {
+    fun loadForPrefs(context: Context, prefs: AppPreferences): Bitmap {
+        return when (prefs.backgroundMode) {
+            AppPreferences.BackgroundMode.CUSTOM_IMAGE -> {
+                val uri = prefs.customBackgroundUri
+                if (uri != null) loadUri(context, uri) ?: loadSystemOrFallback(context)
+                else loadSystemOrFallback(context)
+            }
+            AppPreferences.BackgroundMode.SOLID -> solidBitmap(context, prefs.solidColorArgb)
+            AppPreferences.BackgroundMode.SYSTEM_WALLPAPER -> loadSystemOrFallback(context)
+        }
+    }
+
+    fun loadUri(context: Context, uri: Uri): Bitmap? {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(input, null, bounds)
+            }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val opts = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize(boundsWidth = 0, boundsHeight = 0, hint = MAX_EDGE)
+                }
+                // Re-decode with sampling based on a second pass
+                null
+            }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val bmp = BitmapFactory.decodeStream(input) ?: return null
+                downscale(bmp)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "loadUri failed", t)
+            null
+        }
+    }
+
+    private fun sampleSize(boundsWidth: Int, boundsHeight: Int, hint: Int): Int {
+        var sample = 1
+        var w = boundsWidth
+        var h = boundsHeight
+        while (max(w, h) / sample > hint) sample *= 2
+        return sample.coerceAtLeast(1)
+    }
+
+    fun loadSystemOrFallback(context: Context): Bitmap {
         return try {
             val wm = WallpaperManager.getInstance(context)
             val drawable = try {
                 wm.drawable
-            } catch (t: SecurityException) {
-                Log.i(TAG, "wallpaper permission denied, using fallback", t)
+            } catch (_: SecurityException) {
                 null
-            } catch (t: Throwable) {
-                Log.w(TAG, "wallpaper load failed", t)
+            } catch (_: Throwable) {
                 null
             }
             if (drawable != null) {
@@ -43,9 +85,18 @@ object WallpaperLoader {
                 fallbackGradient(context)
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "fallback wallpaper", t)
+            Log.w(TAG, "system wallpaper failed", t)
             fallbackGradient(context)
         }
+    }
+
+    fun solidBitmap(context: Context, argb: Int): Bitmap {
+        val dm = context.resources.displayMetrics
+        val w = dm.widthPixels.coerceIn(720, MAX_EDGE)
+        val h = dm.heightPixels.coerceIn(1280, (MAX_EDGE * 2))
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        Canvas(bmp).drawColor(argb)
+        return bmp
     }
 
     private fun downscale(src: Bitmap): Bitmap {
@@ -59,8 +110,8 @@ object WallpaperLoader {
 
     fun fallbackGradient(context: Context): Bitmap {
         val dm = context.resources.displayMetrics
-        val w = (dm.widthPixels.coerceAtMost(MAX_EDGE)).coerceAtLeast(720)
-        val h = (dm.heightPixels.coerceAtMost((MAX_EDGE * 1.8f).toInt())).coerceAtLeast(1280)
+        val w = dm.widthPixels.coerceIn(720, MAX_EDGE)
+        val h = dm.heightPixels.coerceIn(1280, (MAX_EDGE * 2))
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val night = (context.resources.configuration.uiMode and
@@ -75,23 +126,10 @@ object WallpaperLoader {
         return bmp
     }
 
-    /** Soft blur for wallpaper backdrop (API 31+ RenderEffect-ready path uses Compose blur). */
-    fun softBlur(src: Bitmap, radius: Int = 24): Bitmap {
-        if (Build.VERSION.SDK_INT < 31) {
-            // Cheap downscale-upscale approximation when Toolkit blur unavailable.
-            val smallW = (src.width / 8).coerceAtLeast(1)
-            val smallH = (src.height / 8).coerceAtLeast(1)
-            val small = Bitmap.createScaledBitmap(src, smallW, smallH, true)
-            return Bitmap.createScaledBitmap(small, src.width, src.height, true)
-        }
-        return try {
-            // Prefer downscale approximation for speed/stability without RenderScript.
-            val smallW = (src.width / 6).coerceAtLeast(1)
-            val smallH = (src.height / 6).coerceAtLeast(1)
-            val small = Bitmap.createScaledBitmap(src, smallW, smallH, true)
-            Bitmap.createScaledBitmap(small, src.width, src.height, true)
-        } catch (_: Throwable) {
-            src
-        }
+    fun softBlur(src: Bitmap): Bitmap {
+        val smallW = (src.width / 5).coerceAtLeast(1)
+        val smallH = (src.height / 5).coerceAtLeast(1)
+        val small = Bitmap.createScaledBitmap(src, smallW, smallH, true)
+        return Bitmap.createScaledBitmap(small, src.width, src.height, true)
     }
 }

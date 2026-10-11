@@ -1,53 +1,31 @@
 # AirPods Mode
 
-精简的安卓 App：在三星等安卓机上切换 AirPods Pro 的 **降噪 / 通透 / Adaptive**，并提供控制中心快捷开关。
+精简安卓 App：切换 AirPods 降噪 / 通透 / Adaptive，控制中心快捷开关，毛玻璃 UI。
 
-个人学习项目，不盈利。AirPods 与相关协议归 Apple。本应用不播放音频，不接入苹果官方 SDK。
+个人学习项目，不盈利。不播放音频，不接入苹果官方 SDK。
 
-## 功能（v0.2）
+## v0.3 功能
 
-- 三种聆听模式：Noise Cancellation、Transparency、**Adaptive**
-- **Adaptive 三档面板**（类似 iOS）：首次点 Adaptive 进入默认强度 50；再点 / 长按 / 点箭头展开毛玻璃卡片栈  
-  - 上：更通透（强度 0）  
-  - 中：默认 Adaptive（50）  
-  - 下：更降噪（100）  
-  - 发包：`04 00 04 00 09 00 2E [level] 00 00 00`  
-  - **说明：AirPods Pro 3 可能接受该包但听感变化不明显（社区反馈）。**
-- **对话感知**开关（AACP `0x28`）
-- **空间音频**：诚实处理——可尝试系统 Spatializer / 打开声音设置；**不会假装苹果空间音频已开启**（安卓无 Apple HRTF，通常需 Root）
-- 毛玻璃 UI + 桌面壁纸背景（无权限时用渐变兜底）
-- 控制中心 Tile：循环切换 + 三个单独开关
-- 简体中文 / English，跟随系统深浅色
-- **不需要 Root**，不依赖 Xposed
+- 多机型：Pro / Pro 2 / Pro 3 / AirPods 4 ANC / Max / Max 2（按产品 ID / 型号字符串 / 蓝牙名识别；不支持的功能自动隐藏）
+- Adaptive 三档强度（0 / 50 / 100，协议 `0x2E`）
+- 对话感知（支持的机型）
+- 自定义背景：设置里从相册选图（可持久化 URI），或系统壁纸 / 纯色
+- 毛玻璃圆角按压动画（圆角 ripple，无方形水波）
+- **上次连接位置**：前台服务运行中断开时记录 GPS（不是 Find My）
+- 电池优化申请 + 三星自启动说明
+- 已移除空间音频入口
+- 快捷控制条：点 QS Tile / 通知打开类似双卡条的全宽三档面板（第三方 Tile 无法真正自由改尺寸，已在界面说明）
+
+## Find My
+
+无法在安卓上实现苹果「查找」网络与耳机盒发声（需逆向/Root）。请用「上次连接位置」。
 
 ## 系统要求
 
-- **三星 One UI 9 / Android 17**（如 S26 Ultra）。更早 One UI 在不 Root 时往往连不上 L2CAP。
-- 先在系统蓝牙里配对 AirPods（Pro 1/2/3、AirPods 4 ANC 等）。
-- 授予蓝牙与通知权限；壁纸权限可选。
+三星 **One UI 9 / Android 17**（不 Root）。先系统蓝牙配对。
 
 ## 安装
 
-从 [Releases](https://github.com/chinatsu033/AirPodsMode/releases) 下载 `AirPodsMode-*.apk`。
+[Releases](https://github.com/chinatsu033/AirPodsMode/releases) 下载 `AirPodsMode-*.apk`。
 
-## Adaptive 连接发包顺序
-
-1. Handshake  
-2. Feature enable `04 00 04 00 4D 00 FF …`（解锁 Adaptive / 对话感知）  
-3. 订阅通知  
-4. ListeningModeConfigs `0x1A / 0x0F`  
-5. 设模式 Adaptive `0x0D / 0x04`  
-6. （可选）Adaptive 强度 `0x2E / level`
-
-协议字节来自公开 AACP 文档（LibrePods AAP Definitions），**未复制 LibrePods 源码**（GPL-3.0）。本仓库 MIT。依赖 HiddenApiBypass（Apache-2.0）。
-
-## 构建
-
-```bash
-./gradlew assembleRelease
-```
-
-## 说明
-
-- 没有真机 S26 Ultra / AirPods Pro 3 时无法完整验证 L2CAP、Adaptive 三档与对话感知。
-- 图标为原创剪影，不是苹果商标素材。
+协议字节来自公开 AACP 文档，未复制 LibrePods GPL 源码。本仓库 MIT。
