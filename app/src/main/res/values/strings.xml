@@ -92,4 +92,5 @@
     <string name="qs_resize_note">Android / Samsung do not let third-party Quick Settings tiles freely resize like the Dual SIM bar. This panel is the full-width control; the QS tile stays compact (icon + mode).</string>
     <string name="qs_open_panel">Control bar</string>
     <string name="qs_notification_hint">Tap notification for the full SIM-style control bar. Actions: Transparency · Adaptive · Noise Cancellation.</string>
+    <string name="tile_not_connected_toast">AirPods not connected — open the control panel to connect.</string>
 </resources>

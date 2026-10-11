@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
@@ -39,12 +39,16 @@
 
         <activity
             android:name=".ui.QsControlPanelActivity"
-            android:exported="false"
+            android:exported="true"
             android:excludeFromRecents="true"
-            android:showOnLockScreen="true"
             android:theme="@style/Theme.AirPodsMode.Transparent"
-            android:launchMode="singleInstance"
-            android:taskAffinity="" />
+            android:launchMode="singleTop"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="io.github.chinatsu033.airpodsmode.OPEN_QS_PANEL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".service.AirPodsForegroundService"

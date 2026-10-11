@@ -19,44 +19,44 @@ abstract class BaseModeTileService : TileService() {
     override fun onStartListening() = refresh()
 
     override fun onClick() {
-        AirPodsForegroundService.start(
-            this,
-            AirPodsForegroundService.ACTION_SET_MODE,
-            targetMode,
-        )
-        qsTile?.let {
-            it.state = Tile.STATE_ACTIVE
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                it.subtitle = getString(labelRes)
-            }
-            it.updateTile()
+        val connected = try {
+            (application as? AirPodsModeApp)?.connection?.state?.value?.connected == true
+        } catch (_: Throwable) {
+            false
+        }
+        if (connected) {
+            // Safe: FGS already running typically; start() is try/caught.
+            AirPodsForegroundService.start(
+                this,
+                AirPodsForegroundService.ACTION_SET_MODE,
+                targetMode,
+            )
+            refresh()
+        } else {
+            // Not connected — open panel / app instead of crashing via FGS.
+            TileActions.openControlPanel(this)
         }
     }
 
     private fun refresh() {
         val tile = qsTile ?: return
-        val mode = (application as? AirPodsModeApp)?.connection?.state?.value?.mode
-        val connected = (application as? AirPodsModeApp)?.connection?.state?.value?.connected == true
-        tile.icon = Icon.createWithResource(this, iconRes)
-        tile.label = getString(labelRes)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            tile.subtitle = if (connected && mode == targetMode) {
-                getString(R.string.tile_active)
-            } else {
-                getString(R.string.tile_tap_to_set)
-            }
-        }
-        tile.state = when {
-            connected && mode == targetMode -> Tile.STATE_ACTIVE
-            connected -> Tile.STATE_INACTIVE
-            else -> Tile.STATE_INACTIVE
-        }
-        tile.updateTile()
-    }
-
-    protected fun requestSelf(context: Context, clazz: Class<out TileService>) {
         try {
-            requestListeningState(context, ComponentName(context, clazz))
+            val st = (application as? AirPodsModeApp)?.connection?.state?.value
+            tile.icon = Icon.createWithResource(this, iconRes)
+            tile.label = getString(labelRes)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tile.subtitle = if (st?.connected == true && st.mode == targetMode) {
+                    getString(R.string.tile_active)
+                } else {
+                    getString(R.string.tile_tap_to_set)
+                }
+            }
+            tile.state = if (st?.connected == true && st.mode == targetMode) {
+                Tile.STATE_ACTIVE
+            } else {
+                Tile.STATE_INACTIVE
+            }
+            tile.updateTile()
         } catch (_: Throwable) {
         }
     }

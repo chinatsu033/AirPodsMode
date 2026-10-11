@@ -92,4 +92,5 @@
     <string name="qs_resize_note">安卓 / 三星不允许第三方快捷开关像双卡切换条那样自由改尺寸。这个面板才是全宽控制；控制中心里的 Tile 仍是小图标+模式。</string>
     <string name="qs_open_panel">控制条</string>
     <string name="qs_notification_hint">点通知打开类似双卡条的全宽控制。快捷操作：通透 · Adaptive · 降噪。</string>
+    <string name="tile_not_connected_toast">尚未连接 AirPods — 已打开控制面板，请先连接。</string>
 </resources>

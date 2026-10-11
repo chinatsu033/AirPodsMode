@@ -4,8 +4,8 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.util.Log
 import io.github.chinatsu033.airpodsmode.bt.AirPodsConnection
-import io.github.chinatsu033.airpodsmode.bt.L2capSocketFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,9 +17,13 @@ class AirPodsModeApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        L2capSocketFactory.ensureHiddenApiExempt()
+        // Do NOT call HiddenApiBypass here — defer until Bluetooth connect.
         connection = AirPodsConnection(appScope)
-        createNotificationChannel()
+        try {
+            createNotificationChannel()
+        } catch (t: Throwable) {
+            Log.w(TAG, "notification channel", t)
+        }
     }
 
     private fun createNotificationChannel() {
@@ -38,5 +42,6 @@ class AirPodsModeApp : Application() {
 
     companion object {
         const val CHANNEL_ID = "airpods_connection"
+        private const val TAG = "AirPodsModeApp"
     }
 }

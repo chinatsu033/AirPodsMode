@@ -11,7 +11,7 @@ class AppPreferences(context: Context) {
     enum class BackgroundMode { SYSTEM_WALLPAPER, CUSTOM_IMAGE, SOLID }
 
     var backgroundMode: BackgroundMode
-        get() = BackgroundMode.entries.getOrElse(prefs.getInt(KEY_BG_MODE, 0)) { BackgroundMode.SYSTEM_WALLPAPER }
+        get() = BackgroundMode.entries.getOrElse(prefs.getInt(KEY_BG_MODE, BackgroundMode.SOLID.ordinal)) { BackgroundMode.SOLID }
         set(value) = prefs.edit().putInt(KEY_BG_MODE, value.ordinal).apply()
 
     var customBackgroundUri: Uri?
