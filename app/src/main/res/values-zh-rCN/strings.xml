@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AirPods 模式</string>
+    <string name="app_tagline">控制 AirPods Pro 降噪模式</string>
+
+    <string name="notification_channel_name">AirPods 连接</string>
+    <string name="notification_channel_desc">保持控制通道开启，供任务栏快捷开关使用</string>
+
+    <string name="mode_anc">降噪</string>
+    <string name="mode_transparency">通透</string>
+    <string name="mode_adaptive">Adaptive</string>
+    <string name="mode_off">关闭</string>
+    <string name="mode_unknown">未知</string>
+    <string name="mode_anc_desc">隔绝外界噪音</string>
+    <string name="mode_transparency_desc">听清周围声音</string>
+    <string name="mode_adaptive_desc">自动在降噪与通透之间调节</string>
+
+    <string name="section_modes">聆听模式</string>
+    <string name="action_connect">连接</string>
+    <string name="action_reconnect">重新连接</string>
+    <string name="action_disconnect">断开</string>
+    <string name="action_grant_permissions">授予权限</string>
+
+    <string name="status_connecting">正在连接…</string>
+    <string name="status_connected">已连接</string>
+    <string name="status_disconnected">未连接</string>
+    <string name="status_connected_mode">%1$s · %2$s</string>
+    <string name="status_error">错误：%1$s</string>
+    <string name="status_error_short">连接失败</string>
+    <string name="status_no_device">没有找到已配对的 AirPods。请先在系统蓝牙里配对。</string>
+    <string name="status_no_device_short">未找到 AirPods</string>
+    <string name="status_need_permission">需要权限</string>
+
+    <string name="battery_left">左 %1$d%%</string>
+    <string name="battery_right">右 %1$d%%</string>
+    <string name="battery_case">盒 %1$d%%</string>
+
+    <string name="tile_cycle_label">AirPods 模式</string>
+    <string name="tile_cycle_cd">切换降噪模式，当前 %1$s</string>
+    <string name="tile_active">使用中</string>
+    <string name="tile_tap_to_set">点按切换</string>
+
+    <string name="hint_qs_tiles">提示：下拉控制中心，点编辑，添加「AirPods 模式」（在降噪 → 通透 → Adaptive 之间循环）或三个单独的快捷开关。三星手机需要 One UI 9 / Android 17，并且不用 Root。请先在系统蓝牙里配对 AirPods。</string>
+</resources>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AirPods Mode</string>
+    <string name="app_tagline">Noise control for AirPods Pro</string>
+
+    <string name="notification_channel_name">AirPods connection</string>
+    <string name="notification_channel_desc">Keeps the control channel open for Quick Settings tiles</string>
+
+    <string name="mode_anc">Noise Cancellation</string>
+    <string name="mode_transparency">Transparency</string>
+    <string name="mode_adaptive">Adaptive</string>
+    <string name="mode_off">Off</string>
+    <string name="mode_unknown">Unknown</string>
+    <string name="mode_anc_desc">Block outside noise</string>
+    <string name="mode_transparency_desc">Hear your surroundings</string>
+    <string name="mode_adaptive_desc">Auto-blend ANC and transparency</string>
+
+    <string name="section_modes">Listening mode</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_reconnect">Reconnect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_grant_permissions">Grant permissions</string>
+
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connected_mode">%1$s · %2$s</string>
+    <string name="status_error">Error: %1$s</string>
+    <string name="status_error_short">Connection failed</string>
+    <string name="status_no_device">No paired AirPods found. Pair them in system Bluetooth first.</string>
+    <string name="status_no_device_short">No AirPods</string>
+    <string name="status_need_permission">Permissions required</string>
+
+    <string name="battery_left">L %1$d%%</string>
+    <string name="battery_right">R %1$d%%</string>
+    <string name="battery_case">Case %1$d%%</string>
+
+    <string name="tile_cycle_label">AirPods Mode</string>
+    <string name="tile_cycle_cd">Cycle noise mode, currently %1$s</string>
+    <string name="tile_active">Active</string>
+    <string name="tile_tap_to_set">Tap to set</string>
+
+    <string name="hint_qs_tiles">Tip: pull down the Quick Settings panel, tap Edit, and add “AirPods Mode” (cycles ANC → Transparency → Adaptive) or the three individual tiles. Requires One UI 9 / Android 17 on Samsung without root. Pair AirPods in system Bluetooth first.</string>
+</resources>
