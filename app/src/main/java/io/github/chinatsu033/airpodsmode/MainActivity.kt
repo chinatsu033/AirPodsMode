@@ -31,6 +31,7 @@ import io.github.chinatsu033.airpodsmode.aacp.NoiseMode
 import io.github.chinatsu033.airpodsmode.bt.BondedAirPodsFinder
 import io.github.chinatsu033.airpodsmode.service.AirPodsForegroundService
 import io.github.chinatsu033.airpodsmode.ui.AirPodsModeAppScreen
+import io.github.chinatsu033.airpodsmode.ui.LastLocationScreen
 import io.github.chinatsu033.airpodsmode.ui.SettingsScreen
 import io.github.chinatsu033.airpodsmode.ui.theme.AirPodsModeTheme
 import io.github.chinatsu033.airpodsmode.util.AppPreferences
@@ -45,6 +46,8 @@ class MainActivity : ComponentActivity() {
     private var hasNotifications by mutableStateOf(false)
     private var hasLocation by mutableStateOf(false)
     private var showSettings by mutableStateOf(false)
+    private var showLastLocation by mutableStateOf(false)
+    private var lastLocEpoch by mutableIntStateOf(0)
     private var backgroundEpoch by mutableIntStateOf(0)
     private var batteryIgnored by mutableStateOf(false)
     private var showNotifRationale by mutableStateOf(false)
@@ -143,6 +146,12 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(EXTRA_PROMPT_NOTIF, false) == true && !hasNotifications) {
             showNotifRationale = true
         }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_LAST_LOCATION, false) == true ||
+            intent?.data?.host == "last-location"
+        ) {
+            showLastLocation = true
+            showSettings = false
+        }
 
         val app = application as AirPodsModeApp
         try {
@@ -194,7 +203,43 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    if (showSettings) {
+                    if (showLastLocation) {
+                        LastLocationScreen(
+                            prefs = prefs,
+                            hasLocationPermission = hasLocation,
+                            hasNotifications = hasNotifications,
+                            refreshKey = lastLocEpoch,
+                            onBack = { showLastLocation = false },
+                            onOpenMap = { lat, lng ->
+                                try {
+                                    val gmm = Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng(AirPods)"))
+                                    if (gmm.resolveActivity(packageManager) != null) startActivity(gmm)
+                                    else startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse("https://www.openstreetmap.org/?mlat=$lat&mlon=$lng#map=17/$lat/$lng"),
+                                        ),
+                                    )
+                                } catch (t: Throwable) {
+                                    Toast.makeText(this, t.message, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onClear = {
+                                prefs.clearLastLocation()
+                                lastLocEpoch++
+                            },
+                            onRequestLocationPermission = {
+                                locationPermLauncher.launch(PermissionHelper.locationPermissions())
+                            },
+                            onRequestNotifications = {
+                                showNotifRationale = true
+                            },
+                            onRefresh = {
+                                refreshPermState()
+                                lastLocEpoch++
+                            },
+                        )
+                    } else if (showSettings) {
                         SettingsScreen(
                             prefs = prefs,
                             batteryIgnored = batteryIgnored,
@@ -261,6 +306,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onBackgroundChanged = { backgroundEpoch++ },
+                            onOpenLastLocation = {
+                                refreshPermState()
+                                showSettings = false
+                                showLastLocation = true
+                            },
                         )
                     } else {
                         AirPodsModeAppScreen(
@@ -270,6 +320,10 @@ class MainActivity : ComponentActivity() {
                             hasNotifications = hasNotifications,
                             bondedHint = bondedHint,
                             backgroundEpoch = backgroundEpoch,
+                            onOpenLastLocation = {
+                                refreshPermState()
+                                showLastLocation = true
+                            },
                             onOpenSettings = {
                                 batteryIgnored = try {
                                     BatteryOptimHelper.isIgnoringBatteryOptimizations(this)
@@ -326,6 +380,10 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (intent.getBooleanExtra(EXTRA_PROMPT_NOTIF, false) && !PermissionHelper.hasNotifications(this)) {
             showNotifRationale = true
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_LAST_LOCATION, false) || intent.data?.host == "last-location") {
+            showLastLocation = true
+            showSettings = false
         }
     }
 
@@ -460,5 +518,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
         const val EXTRA_PROMPT_NOTIF = "prompt_notif"
+        const val EXTRA_OPEN_LAST_LOCATION = "open_last_location"
     }
 }

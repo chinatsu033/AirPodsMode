@@ -114,4 +114,15 @@
     <string name="devices_found">Paired: %1$s (tap to refresh)</string>
     <string name="qs_notif_prompt">Tap to grant notification permission for background control &amp; last location.</string>
     <string name="tile_not_connected_toast">Not connected — open panel to connect.</string>
+    <string name="last_location_title_zh_friendly">Last location</string>
+    <string name="last_location_open_detail">Open last location →</string>
+    <string name="last_location_card_empty">No place saved yet — tap for details</string>
+    <string name="last_location_empty_title">No location recorded yet</string>
+    <string name="last_location_how_to">When AirPods disconnect while the connection notification (foreground service) is running, GPS is saved here as a Find My alternative.</string>
+    <string name="last_location_requirements">Requirements to record</string>
+    <string name="last_location_req_notif">Notification permission (background service)</string>
+    <string name="last_location_req_loc">Location permission</string>
+    <string name="last_location_req_fgs">Then: Connect in-app → keep service running → disconnect AirPods to save this place.</string>
+    <string name="last_location_coords">%1$.5f, %2$.5f</string>
+    <string name="last_location_refresh">Refresh</string>
 </resources>

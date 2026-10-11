@@ -3,6 +3,7 @@ package io.github.chinatsu033.airpodsmode.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +62,7 @@ fun SettingsScreen(
     onClearLocation: () -> Unit,
     onOpenMap: (Double, Double) -> Unit,
     onBackgroundChanged: () -> Unit,
+    onOpenLastLocation: () -> Unit,
 ) {
     val context = LocalContext.current
     var refresh by remember { mutableStateOf(0) }
@@ -144,6 +146,20 @@ fun SettingsScreen(
             }
 
             SectionLabel(stringResource(R.string.settings_last_location))
+            GlassCard(
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                selected = true,
+                corner = 18.dp,
+                onClick = onOpenLastLocation,
+            ) {
+                Box(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
+                    Text(
+                        stringResource(R.string.last_location_open_detail),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
             GlassCard(modifier = Modifier.fillMaxWidth(), corner = 22.dp) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

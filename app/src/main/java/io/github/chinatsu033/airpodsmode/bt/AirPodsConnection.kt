@@ -98,14 +98,14 @@ class AirPodsConnection(
             val model = _state.value.model
             if (mode == NoiseMode.ANC && !model.supportsAnc) return@withContext false
             if (mode == NoiseMode.TRANSPARENCY && !model.supportsTransparency) return@withContext false
-            if (mode == NoiseMode.ADAPTIVE && !model.supportsAdaptive) return@withContext false
+            if (mode == NoiseMode.ADAPTIVE && !model.allowAdaptiveCommand()) return@withContext false
             try {
                 if (mode == NoiseMode.ADAPTIVE) {
                     writeRaw(AacpPackets.FEATURE_ENABLE_PRO2)
                     writeRaw(AacpPackets.LISTENING_MODE_CONFIGS_ALL)
                 }
                 writeRaw(AacpPackets.setListeningMode(mode))
-                if (mode == NoiseMode.ADAPTIVE && model.supportsAdaptiveStrength) {
+                if (mode == NoiseMode.ADAPTIVE && model.showAdaptiveStrengthInUi()) {
                     val clamped = (adaptiveLevel ?: _state.value.adaptiveLevel).coerceIn(0, 100)
                     writeRaw(AacpPackets.setAdaptiveNoiseLevel(clamped))
                     _state.value = _state.value.copy(mode = mode, adaptiveLevel = clamped, lastError = null)
@@ -121,7 +121,7 @@ class AirPodsConnection(
         }
 
     suspend fun setAdaptiveLevel(level: Int): Boolean = withContext(Dispatchers.IO) {
-        if (!_state.value.connected || !_state.value.model.supportsAdaptiveStrength) {
+        if (!_state.value.connected || !_state.value.model.showAdaptiveStrengthInUi()) {
             return@withContext false
         }
         try {
@@ -146,7 +146,7 @@ class AirPodsConnection(
     }
 
     suspend fun setConversationalAwareness(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
-        if (!_state.value.connected || !_state.value.model.supportsConversationalAwareness) {
+        if (!_state.value.connected || !_state.value.model.showConversationalAwarenessInUi()) {
             return@withContext false
         }
         try {

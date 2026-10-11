@@ -87,6 +87,7 @@ fun AirPodsModeAppScreen(
     bondedHint: String,
     backgroundEpoch: Int,
     onOpenSettings: () -> Unit,
+    onOpenLastLocation: () -> Unit,
     onRequestPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onConnect: () -> Unit,
@@ -266,6 +267,34 @@ fun AirPodsModeAppScreen(
                     }
                 }
 
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    corner = 18.dp,
+                    onClick = onOpenLastLocation,
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.last_location_title_zh_friendly),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            if (prefs.hasLastLocation()) {
+                                prefs.lastLocationAddress
+                                    ?: stringResource(
+                                        R.string.last_location_coords,
+                                        prefs.lastLat,
+                                        prefs.lastLng,
+                                    )
+                            } else {
+                                stringResource(R.string.last_location_card_empty)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                        )
+                    }
+                }
+
                 Text(
                     text = stringResource(R.string.section_modes),
                     style = MaterialTheme.typography.titleMedium,
@@ -297,34 +326,34 @@ fun AirPodsModeAppScreen(
                         },
                     )
                 }
-                if (model.supportsAdaptive) {
+                if (model.showAdaptiveInUi()) {
                     AdaptiveModeSection(
                         selected = state.mode == NoiseMode.ADAPTIVE,
                         enabled = state.connected,
-                        expanded = adaptiveExpanded && model.supportsAdaptiveStrength,
-                        showStrength = model.supportsAdaptiveStrength,
+                        expanded = adaptiveExpanded && model.showAdaptiveStrengthInUi(),
+                        showStrength = model.showAdaptiveStrengthInUi(),
                         adaptiveLevel = state.adaptiveLevel,
                         onPrimaryClick = {
                             if (state.mode != NoiseMode.ADAPTIVE) {
                                 onSetMode(NoiseMode.ADAPTIVE)
                                 adaptiveExpanded = false
-                            } else if (model.supportsAdaptiveStrength) {
+                            } else if (model.showAdaptiveStrengthInUi()) {
                                 adaptiveExpanded = !adaptiveExpanded
                             }
                         },
                         onLongPress = {
                             if (state.mode != NoiseMode.ADAPTIVE) onSetMode(NoiseMode.ADAPTIVE)
-                            if (model.supportsAdaptiveStrength) adaptiveExpanded = true
+                            if (model.showAdaptiveStrengthInUi()) adaptiveExpanded = true
                         },
                         onToggleExpand = {
                             if (state.mode != NoiseMode.ADAPTIVE) onSetMode(NoiseMode.ADAPTIVE)
-                            if (model.supportsAdaptiveStrength) adaptiveExpanded = !adaptiveExpanded
+                            if (model.showAdaptiveStrengthInUi()) adaptiveExpanded = !adaptiveExpanded
                         },
                         onPickLevel = onSetAdaptiveLevel,
                     )
                 }
 
-                if (model.supportsConversationalAwareness) {
+                if (model.showConversationalAwarenessInUi()) {
                     ConversationalAwarenessCard(
                         enabled = state.connected,
                         checked = state.conversationalAwareness == true,

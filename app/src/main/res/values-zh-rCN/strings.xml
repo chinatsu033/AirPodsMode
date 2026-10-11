@@ -114,4 +114,15 @@
     <string name="devices_found">已配对：%1$s（点按刷新）</string>
     <string name="qs_notif_prompt">点按以授予通知权限，用于后台控制与最后位置。</string>
     <string name="tile_not_connected_toast">尚未连接 — 打开面板进行连接。</string>
+    <string name="last_location_title_zh_friendly">最后位置</string>
+    <string name="last_location_open_detail">查看最后位置 →</string>
+    <string name="last_location_card_empty">还没有记录位置 — 点按查看说明</string>
+    <string name="last_location_empty_title">还没有记录位置</string>
+    <string name="last_location_how_to">当前台服务（连接通知）在运行时，AirPods 断开连接会保存当时的 GPS，作为安卓上「查找」的替代。</string>
+    <string name="last_location_requirements">记录位置需要</string>
+    <string name="last_location_req_notif">通知权限（后台前台服务）</string>
+    <string name="last_location_req_loc">定位权限</string>
+    <string name="last_location_req_fgs">然后：在应用内连接 → 保持服务运行 → 断开 AirPods 即可保存此处。</string>
+    <string name="last_location_coords">%1$.5f, %2$.5f</string>
+    <string name="last_location_refresh">刷新</string>
 </resources>

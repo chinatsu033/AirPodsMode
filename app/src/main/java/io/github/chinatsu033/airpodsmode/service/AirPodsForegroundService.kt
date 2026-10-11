@@ -186,7 +186,7 @@ class AirPodsForegroundService : Service() {
         val modes = buildList {
             if (model.supportsAnc) add(NoiseMode.ANC)
             if (model.supportsTransparency) add(NoiseMode.TRANSPARENCY)
-            if (model.supportsAdaptive) add(NoiseMode.ADAPTIVE)
+            if (model.showAdaptiveInUi()) add(NoiseMode.ADAPTIVE)
         }
         if (modes.isEmpty()) return NoiseMode.TRANSPARENCY
         val idx = modes.indexOf(current)

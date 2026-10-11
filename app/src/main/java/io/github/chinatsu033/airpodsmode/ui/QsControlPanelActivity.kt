@@ -282,7 +282,7 @@ private fun QsSimBarPanel(
 
             val segments = buildList {
                 if (model.supportsTransparency) add(NoiseMode.TRANSPARENCY)
-                if (model.supportsAdaptive) add(NoiseMode.ADAPTIVE)
+                if (model.showAdaptiveInUi()) add(NoiseMode.ADAPTIVE)
                 if (model.supportsAnc) add(NoiseMode.ANC)
             }
             if (segments.isNotEmpty()) {
@@ -319,7 +319,7 @@ private fun QsSimBarPanel(
                                             color = Color.White.copy(alpha = 0.35f),
                                         ),
                                     ) {
-                                        if (mode == NoiseMode.ADAPTIVE && model.supportsAdaptiveStrength) {
+                                        if (mode == NoiseMode.ADAPTIVE && model.showAdaptiveStrengthInUi()) {
                                             if (connectionState.mode == NoiseMode.ADAPTIVE) {
                                                 adaptiveChooser = !adaptiveChooser
                                             } else {
@@ -348,7 +348,7 @@ private fun QsSimBarPanel(
             }
 
             AnimatedVisibility(
-                visible = adaptiveChooser && model.supportsAdaptiveStrength,
+                visible = adaptiveChooser && model.showAdaptiveStrengthInUi(),
                 enter = fadeIn() + expandVertically(spring(stiffness = Spring.StiffnessMediumLow)) +
                     scaleIn(initialScale = 0.94f),
                 exit = fadeOut() + shrinkVertically(),
