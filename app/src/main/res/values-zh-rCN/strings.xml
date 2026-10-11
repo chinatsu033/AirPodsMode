@@ -92,5 +92,26 @@
     <string name="qs_resize_note">安卓 / 三星不允许第三方快捷开关像双卡切换条那样自由改尺寸。这个面板才是全宽控制；控制中心里的 Tile 仍是小图标+模式。</string>
     <string name="qs_open_panel">控制条</string>
     <string name="qs_notification_hint">点通知打开类似双卡条的全宽控制。快捷操作：通透 · Adaptive · 降噪。</string>
-    <string name="tile_not_connected_toast">尚未连接 AirPods — 已打开控制面板，请先连接。</string>
+    <string name="rationale_notif_title">需要通知权限</string>
+    <string name="rationale_notif_body">Android 13+ 要求前台服务显示常驻通知，才能在后台保持 AirPods 控制通道，并在断开时记录最后位置。若拒绝，仍可在本应用打开时连接并切换模式（仅前台）。</string>
+    <string name="rationale_bt_title">需要附近的设备 / 蓝牙权限</string>
+    <string name="rationale_bt_body">用于查找已配对的 AirPods 并建立控制通道。</string>
+    <string name="rationale_continue">继续</string>
+    <string name="rationale_later">稍后</string>
+    <string name="banner_notif_title">后台连接需要通知权限</string>
+    <string name="banner_notif_body">没有通知权限时无法启动前台服务。你仍可在应用打开时点「连接」切换模式。点「授予通知」或「应用设置」可开启后台连接与最后位置。</string>
+    <string name="action_grant_notifications">授予通知</string>
+    <string name="action_grant_bluetooth">授予蓝牙</string>
+    <string name="action_open_app_settings">应用设置</string>
+    <string name="toast_notif_denied_foreground">已拒绝通知 — 将使用仅前台连接。</string>
+    <string name="toast_bt_required">需要蓝牙权限才能查找 AirPods。</string>
+    <string name="toast_location_granted">已授予定位 — 断开时可记录最后位置。</string>
+    <string name="toast_foreground_connect">正在前台连接（无通知服务）…</string>
+    <string name="toast_notif_for_qs">请开启通知以支持后台快捷开关。正在打开面板…</string>
+    <string name="status_need_bluetooth">需要蓝牙权限</string>
+    <string name="status_connected_foreground">已连接（仅前台）</string>
+    <string name="devices_need_bt">请授予蓝牙权限以列出已配对的 AirPods。</string>
+    <string name="devices_found">已配对：%1$s（点按刷新）</string>
+    <string name="qs_notif_prompt">点按以授予通知权限，用于后台控制与最后位置。</string>
+    <string name="tile_not_connected_toast">尚未连接 — 打开面板进行连接。</string>
 </resources>

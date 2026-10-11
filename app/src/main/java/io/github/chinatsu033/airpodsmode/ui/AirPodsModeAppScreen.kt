@@ -82,15 +82,19 @@ import kotlinx.coroutines.withContext
 fun AirPodsModeAppScreen(
     connection: AirPodsConnection,
     prefs: AppPreferences,
-    permissionsReady: Boolean,
+    hasBluetooth: Boolean,
+    hasNotifications: Boolean,
+    bondedHint: String,
     backgroundEpoch: Int,
     onOpenSettings: () -> Unit,
     onRequestPermissions: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onSetMode: (NoiseMode) -> Unit,
     onSetAdaptiveLevel: (Int) -> Unit,
     onSetConversationalAwareness: (Boolean) -> Unit,
+    onRefreshDevices: () -> Unit,
 ) {
     val state by connection.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -163,9 +167,47 @@ fun AirPodsModeAppScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                StatusGlass(state, permissionsReady)
+                StatusGlass(state, hasBluetooth, hasNotifications)
 
-                if (!permissionsReady) {
+                if (!hasNotifications) {
+                    GlassCard(modifier = Modifier.fillMaxWidth(), corner = 18.dp) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                stringResource(R.string.banner_notif_title),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                stringResource(R.string.banner_notif_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                GlassCard(
+                                    modifier = Modifier.weight(1f).height(40.dp),
+                                    selected = true,
+                                    corner = 14.dp,
+                                    onClick = onRequestPermissions,
+                                ) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(stringResource(R.string.action_grant_notifications), color = MaterialTheme.colorScheme.onBackground)
+                                    }
+                                }
+                                GlassCard(
+                                    modifier = Modifier.weight(1f).height(40.dp),
+                                    corner = 14.dp,
+                                    onClick = onOpenAppSettings,
+                                ) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(stringResource(R.string.action_open_app_settings), color = MaterialTheme.colorScheme.onBackground)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!hasBluetooth) {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         selected = true,
@@ -173,47 +215,54 @@ fun AirPodsModeAppScreen(
                         onClick = onRequestPermissions,
                     ) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(stringResource(R.string.action_grant_bluetooth), color = MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GlassCard(
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        selected = true,
+                        corner = 18.dp,
+                        onClick = onConnect,
+                        enabled = hasBluetooth && !state.connecting,
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                stringResource(R.string.action_grant_permissions),
+                                if (state.connected) stringResource(R.string.action_reconnect)
+                                else stringResource(R.string.action_connect),
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                     }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        GlassCard(
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            selected = true,
-                            corner = 18.dp,
-                            onClick = onConnect,
-                            enabled = !state.connecting,
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    if (state.connected) stringResource(R.string.action_reconnect)
-                                    else stringResource(R.string.action_connect),
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                )
-                            }
+                    GlassCard(
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        corner = 18.dp,
+                        onClick = onDisconnect,
+                        enabled = state.connected || state.connecting,
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                stringResource(R.string.action_disconnect),
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onBackground.copy(
+                                    alpha = if (state.connected || state.connecting) 1f else 0.45f,
+                                ),
+                            )
                         }
-                        GlassCard(
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            corner = 18.dp,
-                            onClick = onDisconnect,
-                            enabled = state.connected || state.connecting,
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    stringResource(R.string.action_disconnect),
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(
-                                        alpha = if (state.connected || state.connecting) 1f else 0.45f,
-                                    ),
-                                )
-                            }
-                        }
+                    }
+                }
+
+                if (bondedHint.isNotBlank()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth(), corner = 16.dp, onClick = onRefreshDevices) {
+                        Text(
+                            bondedHint,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        )
                     }
                 }
 
@@ -291,7 +340,11 @@ fun AirPodsModeAppScreen(
 }
 
 @Composable
-private fun StatusGlass(state: AirPodsConnection.State, permissionsReady: Boolean) {
+private fun StatusGlass(
+    state: AirPodsConnection.State,
+    hasBluetooth: Boolean,
+    hasNotifications: Boolean,
+) {
     GlassCard(modifier = Modifier.fillMaxWidth(), selected = state.connected) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
@@ -314,9 +367,12 @@ private fun StatusGlass(state: AirPodsConnection.State, permissionsReady: Boolea
                     val detail = buildString {
                         append(
                             when {
-                                !permissionsReady -> stringResource(R.string.status_need_permission)
+                                !hasBluetooth -> stringResource(R.string.status_need_bluetooth)
                                 state.connecting -> stringResource(R.string.status_connecting)
-                                state.connected -> stringResource(R.string.status_connected)
+                                state.connected -> {
+                                    if (hasNotifications) stringResource(R.string.status_connected)
+                                    else stringResource(R.string.status_connected_foreground)
+                                }
                                 state.lastError != null -> stringResource(R.string.status_error_short)
                                 else -> stringResource(R.string.status_disconnected)
                             },

@@ -92,5 +92,26 @@
     <string name="qs_resize_note">Android / Samsung do not let third-party Quick Settings tiles freely resize like the Dual SIM bar. This panel is the full-width control; the QS tile stays compact (icon + mode).</string>
     <string name="qs_open_panel">Control bar</string>
     <string name="qs_notification_hint">Tap notification for the full SIM-style control bar. Actions: Transparency · Adaptive · Noise Cancellation.</string>
-    <string name="tile_not_connected_toast">AirPods not connected — open the control panel to connect.</string>
+    <string name="rationale_notif_title">Notification permission</string>
+    <string name="rationale_notif_body">Android requires a persistent notification for background Bluetooth connection and last-location capture when AirPods disconnect. Without it you can still switch modes while this app is open (foreground-only).</string>
+    <string name="rationale_bt_title">Nearby devices / Bluetooth</string>
+    <string name="rationale_bt_body">AirPods Mode needs Bluetooth permission to find your paired AirPods and open the control channel.</string>
+    <string name="rationale_continue">Continue</string>
+    <string name="rationale_later">Later</string>
+    <string name="banner_notif_title">Background connection needs notifications</string>
+    <string name="banner_notif_body">Without notification permission the app cannot keep a background service. You can still Connect while the app is open. Tap Grant or open Settings to enable full background + last location.</string>
+    <string name="action_grant_notifications">Grant notifications</string>
+    <string name="action_grant_bluetooth">Grant Bluetooth</string>
+    <string name="action_open_app_settings">App settings</string>
+    <string name="toast_notif_denied_foreground">Notifications denied — using foreground-only connect.</string>
+    <string name="toast_bt_required">Bluetooth permission is required to find AirPods.</string>
+    <string name="toast_location_granted">Location granted — last-location can be saved on disconnect.</string>
+    <string name="toast_foreground_connect">Connecting in foreground (no notification service)…</string>
+    <string name="toast_notif_for_qs">Enable notifications for background QS control. Opening panel…</string>
+    <string name="status_need_bluetooth">Bluetooth permission required</string>
+    <string name="status_connected_foreground">Connected (foreground only)</string>
+    <string name="devices_need_bt">Grant Bluetooth to list paired AirPods.</string>
+    <string name="devices_found">Paired: %1$s (tap to refresh)</string>
+    <string name="qs_notif_prompt">Tap to grant notification permission for background control &amp; last location.</string>
+    <string name="tile_not_connected_toast">Not connected — open panel to connect.</string>
 </resources>

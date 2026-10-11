@@ -3,6 +3,8 @@ package io.github.chinatsu033.airpodsmode.ui
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -78,37 +80,79 @@ class QsControlPanelActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        try { AirPodsForegroundService.start(this) } catch (_: Throwable) {}
         val app = application as AirPodsModeApp
         val prefs = AppPreferences(this)
+        val hasNotif = io.github.chinatsu033.airpodsmode.util.PermissionHelper.hasNotifications(this)
+        val hasBt = io.github.chinatsu033.airpodsmode.util.PermissionHelper.hasBluetoothConnect(this)
+        // Only start FGS when notifications are granted — otherwise it fails on Android 13+.
+        if (hasNotif && hasBt) {
+            try { AirPodsForegroundService.start(this) } catch (_: Throwable) {}
+        }
         setContent {
             AirPodsModeTheme {
                 QsSimBarPanel(
                     stateFlow = app.connection.state,
                     prefs = prefs,
+                    needsNotification = !hasNotif,
                     onDismiss = { finish() },
                     onSelectMode = { mode, level ->
-                        if (level != null) {
-                            AirPodsForegroundService.start(
-                                this,
-                                AirPodsForegroundService.ACTION_SET_ADAPTIVE_LEVEL,
-                                adaptiveLevel = level,
-                            )
-                        } else {
-                            AirPodsForegroundService.start(
-                                this,
-                                AirPodsForegroundService.ACTION_SET_MODE,
-                                mode = mode,
-                                adaptiveLevel = if (mode == NoiseMode.ADAPTIVE) {
-                                    AdaptiveNoisePreset.DEFAULT.level
-                                } else null,
-                            )
+                        lifecycleScope.launch {
+                            if (!app.connection.state.value.connected) {
+                                connectBestEffort(app, hasNotif)
+                            }
+                            if (level != null) {
+                                app.connection.setAdaptiveLevel(level)
+                            } else {
+                                app.connection.setMode(
+                                    mode,
+                                    adaptiveLevel = if (mode == NoiseMode.ADAPTIVE) {
+                                        AdaptiveNoisePreset.DEFAULT.level
+                                    } else null,
+                                )
+                            }
+                        }
+                        if (hasNotif) {
+                            if (level != null) {
+                                AirPodsForegroundService.start(
+                                    this,
+                                    AirPodsForegroundService.ACTION_SET_ADAPTIVE_LEVEL,
+                                    adaptiveLevel = level,
+                                )
+                            } else {
+                                AirPodsForegroundService.start(
+                                    this,
+                                    AirPodsForegroundService.ACTION_SET_MODE,
+                                    mode = mode,
+                                    adaptiveLevel = if (mode == NoiseMode.ADAPTIVE) {
+                                        AdaptiveNoisePreset.DEFAULT.level
+                                    } else null,
+                                )
+                            }
                         }
                     },
-                    onConnect = { AirPodsForegroundService.start(this) },
+                    onConnect = {
+                        lifecycleScope.launch { connectBestEffort(app, hasNotif) }
+                    },
+                    onOpenMainForPermission = {
+                        startActivity(
+                            android.content.Intent(this, io.github.chinatsu033.airpodsmode.MainActivity::class.java)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                .putExtra(io.github.chinatsu033.airpodsmode.MainActivity.EXTRA_PROMPT_NOTIF, true),
+                        )
+                        finish()
+                    },
                 )
             }
         }
+    }
+
+    private suspend fun connectBestEffort(app: AirPodsModeApp, hasNotif: Boolean) {
+        if (hasNotif) {
+            try { AirPodsForegroundService.start(this) } catch (_: Throwable) {}
+            return
+        }
+        val device = io.github.chinatsu033.airpodsmode.bt.BondedAirPodsFinder.preferred(this) ?: return
+        app.connection.connect(device)
     }
 }
 
@@ -116,8 +160,10 @@ class QsControlPanelActivity : ComponentActivity() {
 private fun QsSimBarPanel(
     stateFlow: StateFlow<AirPodsConnection.State>,
     prefs: AppPreferences,
+    needsNotification: Boolean,
     onDismiss: () -> Unit,
     onSelectMode: (NoiseMode, Int?) -> Unit,
+    onOpenMainForPermission: () -> Unit,
     onConnect: () -> Unit,
 ) {
     val connectionState by stateFlow.collectAsStateWithLifecycle()
@@ -206,6 +252,29 @@ private fun QsSimBarPanel(
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable { onConnect() }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
+
+            if (needsNotification) {
+                SimGlassBar {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenMainForPermission() }
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.banner_notif_title),
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                        )
+                        Text(
+                            text = stringResource(R.string.qs_notif_prompt),
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
                         )
                     }
                 }
